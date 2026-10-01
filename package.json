@@ -1,0 +1,30 @@
+{
+  "name": "cocktail-taste-test",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@11.0.9",
+  "engines": {
+    "node": ">=22.0.0 <23.0.0"
+  },
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint && eslint scripts tests",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test && vitest run --config vitest.tools.config.ts",
+    "test:architecture": "tsx scripts/check-architecture.ts",
+    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm test:architecture && pnpm build"
+  },
+  "devDependencies": {
+    "@cocktail-taste-test/eslint-config": "workspace:*",
+    "@eslint/js": "^9.35.0",
+    "@types/node": "^22.18.0",
+    "eslint": "^9.35.0",
+    "eslint-plugin-boundaries": "^5.0.0",
+    "turbo": "^2.5.6",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.42.0",
+    "vitest": "^3.2.4"
+  }
+}
