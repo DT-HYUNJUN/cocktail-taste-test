@@ -1,1333 +1,1640 @@
+Status: Accepted  
+Version: v1  
+Phase: 1  
+Last Updated: 2026-10-11
+
 # Testing Strategy
 
-> Phase 1 consolidation note (2026-10-01): [Golden Cases](../domain/golden-cases.md) is the canonical Golden specification. Its five `TasteDimension` values, partial-profile semantics, structured reasons, fixed-fixture policy, and change policy supersede older illustrative Golden examples in this document. In particular, do not interpret an unknown dimension as neutral, use Flavor intensity scores, or use complete ranking-score snapshots as Golden expectations.
+Testing Strategy v1 defines the canonical Phase 1 verification strategy for the cocktail taste recommendation domain.
 
-## 1. Purpose
+The strategy protects domain semantics across:
 
-이 문서는 칵테일 취향 테스트 서비스의 테스트 전략을 정의한다.
+- Assessment transformation,
+- `UserTasteProfile`,
+- `CocktailProfile`,
+- `RecommendationMatch`,
+- Ranking Policy v1,
+- `RecommendationResult`,
+- Reason Builder v1,
+- Golden Cases v1.
 
-테스트의 목적은 단순히 높은 Coverage를 달성하는 것이 아니다.
-
-테스트는 다음을 보호해야 한다.
-
-- Product Core Loop
-- Domain Invariants
-- Recommendation 신뢰성
-- Application Use Case
-- API Contract
-- Architecture Boundary
-- 주요 사용자 Interaction
-- Production Build 가능 여부
-
-테스트는 Codex와 개발자가 코드를 변경했을 때 다음 질문에 답할 수 있어야 한다.
-
-> **"이 변경으로 기존 제품의 중요한 동작이 깨졌는가?"**
+Tests must protect domain behavior rather than incidental implementation structure.
 
 ---
 
-# 2. Testing Principles
+# 1. Testing Principles
 
-## 2.1 Test Behavior, Not Implementation
+## TEST-001 — Test Domain Semantics
 
-구현 방식보다 외부에서 관찰 가능한 행동을 테스트한다.
+Tests should verify externally meaningful domain behavior.
 
-Bad:
-
-```ts
-expect(service.calculateTasteProfile).toHaveBeenCalledTimes(1);
-```
-
-가능하면 다음을 선호한다.
-
-```ts
-expect(result.tasteProfile).toEqual(expectedProfile);
-```
-
-리팩터링만으로 테스트가 불필요하게 깨지는 것을 줄인다.
-
----
-
-## 2.2 Protect Invariants First
-
-모든 코드를 동일한 수준으로 테스트하지 않는다.
-
-우선순위:
+Prefer assertions such as:
 
 ```text
-Domain Invariants
-       ↓
-Core Use Cases
-       ↓
-API Boundaries
-       ↓
-Critical UI
-       ↓
-Supporting Code
+Mojito > Tom Collins
 ```
 
-특히 다음 영역은 강하게 보호한다.
+or:
 
 ```text
-Assessment Completion
-Taste Profile Calculation
-Recommendation
-Recommendation Explanation
-Core User Loop
+Manhattan ↔ Dry Martini
 ```
 
----
-
-## 2.3 Deterministic Tests
-
-테스트는 동일한 코드에서 반복 실행했을 때 동일한 결과를 만들어야 한다.
-
-테스트에서 가능한 한 다음 요소를 통제한다.
-
-- current time
-- random value
-- external API
-- network
-- database state
-
-Recommendation 테스트에서 임의 데이터나 비결정적 결과를 사용하지 않는다.
+over assertions against private intermediate calculations unless the intermediate value itself is the subject of the unit test.
 
 ---
 
-## 2.4 Fast Local Feedback
+## TEST-002 — Separate Policy Layers
 
-대부분의 오류는 빠른 테스트에서 발견할 수 있어야 한다.
-
-개발 중 기본 Feedback Loop:
+Different policy layers require different tests.
 
 ```text
-Code Change
-    ↓
-Relevant Test
-    ↓
-lint / typecheck
-    ↓
-pnpm check
+Assessment Tests
+→ answer transformation
+
+Profile Tests
+→ domain representation
+
+RecommendationMatch Tests
+→ evidence construction
+
+Ranking Policy Tests
+→ semantic candidate relationships
+
+Reason Builder Tests
+→ explanation evidence
+
+Golden Tests
+→ representative end-to-end domain behavior
 ```
 
-E2E 테스트만으로 모든 문제를 발견하려 하지 않는다.
+One test category must not silently replace another.
 
 ---
 
-# 3. Test Pyramid
+## TEST-003 — Golden Tests Are Not Complete Ranking Snapshots
 
-프로젝트는 다음과 같은 테스트 구성을 지향한다.
+Golden Tests protect canonical semantic relationships.
+
+They do not require one complete total order across every candidate.
+
+Prefer:
 
 ```text
-                ┌─────────┐
-                │   E2E   │
-                └────┬────┘
-                     │
-              ┌──────┴──────┐
-              │ Integration │
-              └──────┬──────┘
-                     │
-          ┌──────────┴──────────┐
-          │ Domain / Unit Tests │
-          └─────────────────────┘
+A > B
+C ↔ D
+E = F
 ```
 
-아래로 갈수록:
+when those are the intended semantic guarantees.
 
-- 테스트 수가 많다.
-- 실행 속도가 빠르다.
-- 문제 원인을 찾기 쉽다.
-
-위로 갈수록:
-
-- 테스트 수가 적다.
-- 실제 사용자 환경과 가까워진다.
-- 여러 Layer의 통합을 검증한다.
+Do not convert semantic incomparability or semantic ties into artificial strict ordering assertions.
 
 ---
 
-# 4. Test Categories
+## TEST-004 — Synthetic Tests Protect Policy Boundaries
 
-프로젝트에서는 다음 Test Category를 사용한다.
+Golden Cases use realistic fixed cocktail fixtures.
+
+Synthetic tests use deliberately constructed profiles to isolate Ranking Policy boundaries and invariants.
+
+Both are required.
+
+A realistic Golden Case disappearing for one synthetic edge condition is not a reason to remove the synthetic test.
+
+---
+
+## TEST-005 — Fixed Golden Fixtures
+
+Golden Tests must use versioned fixed fixtures.
+
+They must not query or derive expected behavior from a mutable production cocktail dataset.
+
+Golden Cocktail Fixtures v1 are the canonical Phase 1 fixtures.
+
+---
+
+## TEST-006 — No Golden Backsolving
+
+Tests must not alter cocktail fixture values merely to make an expected Golden relationship pass.
+
+When fixture evidence and a Golden expectation disagree:
 
 ```text
-Domain Test
-Application Test
-Frontend Test
-Integration Test
-Contract Test
-Golden Test
-Architecture Test
-E2E Test
-Build Verification
+inspect fixture
+→ inspect policy
+→ inspect expectation
 ```
 
-각 테스트는 서로 다른 실패를 잡는다.
+Do not reverse-engineer the fixture from the expected output.
 
 ---
 
-# 5. Domain Tests
+## TEST-007 — Determinism
 
-Domain Test는 가장 중요한 테스트 계층이다.
-
-다음과 같은 핵심 함수와 규칙을 검증한다.
+Given the same:
 
 ```text
-Answers
-   ↓
-Taste Profile
-
-Taste Profile
-   +
-Cocktail Profile
-   ↓
-Match
-
-Matches
-   ↓
-Ranking
-
-Match
-   ↓
-Recommendation Reasons
+domain version
+user profile
+cocktail fixtures
+ranking policy
+reason policy
 ```
 
-Domain Test는 가능한 한 다음에 의존하지 않는다.
+the result must be deterministic.
+
+Technical presentation ordering must also be deterministic where required, even when semantic candidates are tied or incomparable.
+
+---
+
+# 2. Test Layers
+
+Phase 1 uses five major test layers.
+
+| Layer        | Primary responsibility                      |
+| ------------ | ------------------------------------------- |
+| Unit         | Local domain rules                          |
+| Policy       | Ranking and Reason Builder semantics        |
+| Integration  | Multiple domain components working together |
+| Golden       | Canonical representative user behavior      |
+| Architecture | Domain boundaries and dependency direction  |
+
+These layers overlap intentionally but have different failure meanings.
+
+---
+
+# 3. Assessment Tests
+
+Assessment tests protect the canonical transformation from answers into `UserTasteProfile`.
+
+They must verify:
 
 ```text
-NestJS
-TypeORM
-PostgreSQL
-HTTP
-Next.js
-React
+AssessmentAnswer[]
+        ↓
+UserTasteProfile
 ```
 
-순수 TypeScript 수준에서 실행 가능하도록 한다.
+without involving recommendation ranking.
 
 ---
 
-# 6. Assessment Domain Tests
+## 3.1 Core Dimension Transformation
 
-다음 Invariant를 보호한다.
+Tests must verify that Assessment answers produce the intended known Core Dimension evidence.
 
-### A-001
+Required behavior includes:
 
-Session은 유효한 Assessment Version을 사용한다.
+- canonical score values remain within `TasteScore`,
+- known dimensions aggregate according to the accepted transformation rules,
+- missing evidence does not silently create a dimension,
+- unknown dimensions remain absent.
 
-### A-002
-
-Assessment에 존재하지 않는 Question에 Answer할 수 없다.
-
-### A-003
-
-Question에 존재하지 않는 Option을 선택할 수 없다.
-
-### A-004
-
-필수 Answer가 누락되면 Assessment를 완료할 수 없다.
-
-### A-005
-
-완료된 Assessment 결과의 입력을 임의로 변경할 수 없다.
-
-대표 테스트:
-
-```ts
-describe("completeAssessment", () => {
-  it("rejects an unknown question");
-
-  it("rejects an option that does not belong to the question");
-
-  it("rejects incomplete required answers");
-
-  it("completes when every required answer is valid");
-});
-```
-
----
-
-# 7. Taste Domain Tests
-
-다음 Invariant를 보호한다.
-
-### T-001
-
-정의된 Taste Dimension만 사용한다.
-
-### T-002
-
-모든 Taste 값은 정의된 범위를 유지한다.
-
-### T-003
-
-동일한 입력은 동일한 Taste Profile을 생성한다.
-
-### T-004
-
-주요 Taste 결과를 Answer와 연결할 수 있다.
-
-### T-005
-
-Scoring Version을 추적할 수 있다.
-
-대표 테스트:
-
-```ts
-describe("calculateTasteProfile", () => {
-  it("produces the same profile for the same answers");
-
-  it("keeps every dimension inside its valid range");
-
-  it("rejects unknown taste dimensions");
-
-  it("records the scoring version");
-});
-```
-
----
-
-# 8. Recommendation Domain Tests
-
-Recommendation은 프로젝트에서 가장 강하게 테스트해야 하는 영역 중 하나다.
-
-다음 Invariant를 보호한다.
-
-### R-001
-
-동일한 Versioned Input은 동일한 결과를 생성한다.
-
-### R-002
-
-유효한 Cocktail만 Recommendation에 포함한다.
-
-### R-003
-
-Ranking은 항상 재현 가능하다.
-
-### R-004
-
-Recommendation Reason은 실제 positive matching evidence와 일치한다. Positive evidence가 없으면 빈 reason 목록을 허용한다.
-
-### R-005
-
-Recommendation Reason은 실제 Matching 결과와 일치한다.
-
-### R-006
-
-Recommendation Score는 정의된 범위를 유지한다.
-
-대표 테스트:
-
-```ts
-describe("recommendCocktails", () => {
-  it("returns deterministic results");
-
-  it("returns only eligible cocktails");
-
-  it("orders recommendations consistently");
-
-  it("uses a deterministic tie breaker");
-
-  it("returns reasons for recommended cocktails");
-
-  it("keeps scores inside the valid range");
-});
-```
-
----
-
-# 9. Boundary Cases
-
-Domain Test에는 정상적인 입력뿐 아니라 경계값을 포함한다.
-
-예:
+Example semantic assertion:
 
 ```text
-모든 Taste Dimension이 최소값
-모든 Taste Dimension이 최대값
-모든 Dimension 값이 동일
-Cocktail이 하나뿐인 경우
-여러 Cocktail의 Score가 동일한 경우
-추천 가능한 Cocktail이 없는 경우
+no evidence for bitter
+→ profile.bitter is absent
 ```
 
-특히 동점 Ranking 규칙은 명시적으로 테스트한다.
-
----
-
-# 10. Golden Recommendation Tests
-
-추천 시스템에는 일반 Unit Test와 별도로 Golden Test를 사용한다.
-
-목적은 다음 질문에 답하는 것이다.
-
-> **"알고리즘은 정상적으로 실행되지만 추천 품질이 이상해지지는 않았는가?"**
-
-대표적인 Taste Persona를 Fixture로 관리한다.
-
-예:
+Not:
 
 ```text
-BRIGHT_REFRESHING
-
-sour               5
-refreshing         5
-preferred flavors  citrus, herbal
-avoided flavors    smoky
-```
-
-Dataset이 확정된 이후 예상되는 Recommendation 특성을 정의한다.
-
-예:
-
-```ts
-it("preserves the Bright & Refreshing Golden ranking relations", () => {
-  const result = recommendCocktails(BRIGHT_REFRESHING, fixedGoldenFixtures);
-
-  expect(result[0].cocktail.id).toBe("mojito");
-  expect(isRankedAbove(result, "mojito", "tom-collins")).toBe(true);
-});
+no evidence for bitter
+→ profile.bitter = 3
 ```
 
 ---
 
-# 11. Avoid Overfitting Golden Tests
+## 3.2 Flavor Preference Transformation
 
-Golden Test에서 모든 Score와 Ranking을 지나치게 고정하지 않는다.
-
-Bad:
-
-```ts
-expect(result).toEqual([
-  { cocktail: "mojito", score: 94.2134 },
-  { cocktail: "tom-collins", score: 91.4812 },
-  { cocktail: "gin-fizz", score: 88.1931 },
-]);
-```
-
-이 방식은 정상적인 알고리즘 개선도 어렵게 만든다.
-
-가능하면 의미 있는 특성을 보호한다.
-
-예:
+Tests must independently verify:
 
 ```text
-Expected top recommendation과 의미 있는 pairwise ranking relation을 보호한다.
-
-Reason은 실제 positive evidence만 포함하고, internal ranking score는 검증하거나 노출하지 않는다.
+preferredFlavors
+avoidedFlavors
 ```
 
-Recommendation Algorithm 변경 시 Golden Test 변화가 의도된 것인지 검토한다.
+including:
+
+- canonical vocabulary only,
+- no accidental duplication,
+- preference and avoidance semantics remain distinct,
+- missing evidence does not create a preference.
 
 ---
 
-# 12. Golden Test Change Policy
+## 3.3 BaseSpirit Preference Transformation
 
-Golden Test 실패를 단순히 "테스트가 오래됐다"는 이유로 수정하지 않는다.
+Tests must verify canonical BaseSpirit preference evidence separately from Flavor evidence.
 
-Recommendation 변경 시 다음 순서를 따른다.
+BaseSpirit must not be inferred from Flavor.
+
+Flavor must not be inferred from BaseSpirit.
+
+---
+
+## 3.4 Canonical Assessment-to-Golden Tests
+
+Assessment Definition v1 specifies all eight canonical Question IDs, the valid scale Answer IDs, and the canonical Flavor/BaseSpirit selection values. Golden Cases v1 §15.1 defines complete eight-answer submissions for G-001 through G-005. The former *undocumented Assessment Answer IDs* gap is resolved at the documentation-contract level.
+
+For each persona, construct exactly one answer for every Question ID and assert the resulting `UserTasteProfile` exactly equals the canonical Golden profile:
+
+| Golden | Core answers (`sweet`, `sour`, `bitter`, `alcohol-intensity`, `refreshing`) | Preferred flavors | Avoided flavors | Preferred bases |
+| --- | --- | --- | --- | --- |
+| G-001 | `very-low`, `very-high`, `very-low`, `very-low`, `very-high` | `citrus`, `herbal` | `smoky` | `[]` |
+| G-002 | `very-high`, `very-low`, `very-low`, `very-low`, `low` | `tropical`, `creamy` | `coffee` | `rum` |
+| G-003 | `very-low`, `very-low`, `medium`, `very-high`, `very-low` | `spicy` | `[]` | `whiskey` |
+| G-004 | `very-low`, `very-low`, `very-high`, `medium`, `medium` | `herbal`, `smoky` | `creamy` | `gin`, `mezcal` |
+| G-005 | `unknown`, `high`, `unknown`, `unknown`, `very-high` | `[]` | `[]` | `[]` |
+
+Scale responses use `answerId`; multi-select responses use `answerIds`, including empty arrays. G-005 is a **complete submission** but must yield a **partial profile** with only `sour: 4` and `refreshing: 5`.
+
+Additional Assessment validation tests must cover:
+
+- exactly eight distinct Question IDs; reject missing or duplicated responses;
+- reject mismatched scale/multi-select answer shapes and unknown Answer IDs;
+- reject duplicate values within multi-select arrays;
+- enforce maximum two preferred Flavors and maximum two preferred BaseSpirits, without an arbitrary maximum on avoided Flavors;
+- reject non-canonical Flavor/BaseSpirit values and preferred/avoided Flavor overlap;
+- accept empty secondary selections and all-`unknown` Core answers;
+- preserve `unknown` as absence, never neutral `3`;
+- preserve deterministic meaning when question order or multi-select order changes (without interpreting order as preference strength).
+
+These are **required tests**, not claims that tests have already executed. The missing seventh BaseSpirit value remains a separate vocabulary documentation gap.
+
+---
+
+# 4. UserTasteProfile Tests
+
+`UserTasteProfile` tests protect representation semantics.
+
+Required tests include:
+
+- known Core Dimension values,
+- absent unknown dimensions,
+- preferred Flavor presence,
+- avoided Flavor presence,
+- preferred BaseSpirit presence,
+- empty secondary preference sets,
+- deterministic normalization where normalization is part of the accepted model.
+
+The key invariant is:
 
 ```text
-Algorithm Change
-       ↓
-Golden Test Failure
-       ↓
-Result Inspection
-       ↓
-Expected Improvement?
-    ↙          ↘
-  NO            YES
-  ↓              ↓
-Fix Algorithm   Update Fixture/Expectation
-                     ↓
-                 Record Decision
+unknown
+≠ neutral 3
 ```
 
-추천 품질을 의미 있게 변경하는 경우 ADR 또는 관련 Domain 문서를 업데이트한다.
+Absence must remain observable as absence.
 
 ---
 
-# 13. Application Tests
+# 5. CocktailProfile Tests
 
-Application Test는 Use Case orchestration을 검증한다.
+`CocktailProfile` tests protect canonical recommendation evidence.
 
-예:
+Required tests include:
+
+- five Core Dimension values,
+- canonical Flavor vocabulary,
+- canonical BaseSpirit vocabulary,
+- Flavor and BaseSpirit separation,
+- empty BaseSpirit presence when no canonical BaseSpirit applies,
+- deterministic fixture identity.
+
+For example:
 
 ```text
-CompleteAssessment
-GetCurrentAssessment
-GetCocktail
-GetRecommendationResult
+Americano
+baseSpirits = []
 ```
 
-Application Test에서는 Repository Port 등을 Fake 또는 Mock으로 대체할 수 있다.
+is valid canonical fixture evidence.
 
-대표적으로 `CompleteAssessment`는 다음 흐름을 검증한다.
+Tests must not fabricate:
 
 ```text
-Load Assessment
-      ↓
-Validate Answers
-      ↓
-Calculate Taste Profile
-      ↓
-Load Cocktail Candidates
-      ↓
-Generate Recommendation
-      ↓
-Persist Result
-      ↓
-Return Result
+Americano
+baseSpirits = ["gin"]
 ```
 
----
-
-# 14. Application Test Scope
-
-Application Test는 다음을 검증한다.
-
-- 올바른 Domain Logic을 호출하는가?
-- 실패가 올바르게 전파되는가?
-- 필요한 데이터가 저장되는가?
-- Transaction이 필요한 Use Case가 일관성을 유지하는가?
-- 반환 결과가 Use Case 요구사항을 만족하는가?
-
-Framework 내부 구현 자체를 테스트하지 않는다.
+merely to make a recommendation relation easier to express.
 
 ---
 
-# 15. Repository Integration Tests
+# 6. RecommendationMatch Tests
 
-TypeORM Repository는 실제 PostgreSQL과의 Integration Test를 가질 수 있다.
+`RecommendationMatch` tests verify evidence construction between one `UserTasteProfile` and one `CocktailProfile`.
 
-다음을 검증한다.
-
-- Entity mapping
-- Relation
-- Query
-- Constraint
-- Migration compatibility
-
-Repository Test에서는 가능하면 Production과 동일한 DB engine을 사용한다.
-
-SQLite 등 다른 DB로 PostgreSQL 동작을 대신 검증하지 않는다.
+These tests should inspect internal evidence because evidence construction itself is the unit under test.
 
 ---
 
-# 16. Migration Tests
+## 6.1 Core Distance
 
-Database Migration은 다음을 검증할 수 있어야 한다.
+For every known user Core Dimension:
 
 ```text
-Empty Database
-     ↓
-Run Migrations
-     ↓
-Current Schema
+dimensionDistance
+=
+|userScore - cocktailScore|
 ```
 
-CI에서는 최소한 migration이 빈 테스트 DB에 정상 적용되는지 확인하는 전략을 고려한다.
+Unknown user dimensions must be excluded.
 
-Production에서는 `synchronize: true`를 schema 관리 수단으로 사용하지 않는다.
-
----
-
-# 17. API Integration Tests
-
-NestJS HTTP Boundary에서는 실제 Request/Response 수준의 테스트를 작성한다.
-
-예:
+Required boundary examples include:
 
 ```text
-POST /assessment-sessions/:id/complete
-```
-
-검증 대상:
-
-- valid request
-- invalid question
-- invalid option
-- incomplete answers
-- successful recommendation
-- response shape
-- HTTP status
-- error mapping
-
----
-
-# 18. Contract Tests
-
-Web과 API가 서로 다른 Contract를 기대하는 문제를 방지한다.
-
-예:
-
-```text
-Web expectation
-      ↓
-packages/contracts
-      ↑
-API response
-```
-
-Contract validation 전략이 결정되면 Request/Response schema가 양쪽에서 동일하게 해석되는지 검증한다.
-
-TypeScript compile success만으로 runtime contract compatibility를 보장한다고 가정하지 않는다.
-
----
-
-# 19. Frontend Component Tests
-
-Frontend Test는 사용자가 관찰하는 동작을 중심으로 작성한다.
-
-대표 대상:
-
-- Question
-- Option selection
-- Progress
-- Result visualization
-- Retry
-- Error state
-- Share interaction
-
-DOM 내부 구조나 component implementation을 과도하게 테스트하지 않는다.
-
-Bad:
-
-```ts
-expect(component.state.selectedIndex).toBe(2);
-```
-
-Preferred:
-
-```ts
-expect(screen.getByRole("radio", { name: "레몬 에이드" })).toBeChecked();
+|1 - 1| = 0
+|1 - 2| = 1
+|1 - 5| = 4
 ```
 
 ---
 
-# 20. Accessibility-aware Queries
+## 6.2 Partial Core Comparison
 
-Frontend Test에서는 가능한 한 사용자가 인식하는 요소를 기준으로 조회한다.
-
-우선:
+Given:
 
 ```text
-role
-label
-accessible name
-text
+user:
+sour = 4
+refreshing = 5
 ```
 
-가능하면 `data-testid`를 기본 선택자로 사용하지 않는다.
+and no other known Core Dimensions, RecommendationMatch must compare only:
 
-이를 통해 테스트 자체가 기본적인 접근성 문제를 발견하는 데 도움을 주도록 한다.
+```text
+sour
+refreshing
+```
+
+It must not create synthetic distance entries for:
+
+```text
+sweet
+bitter
+alcoholIntensity
+```
 
 ---
 
-# 21. Zustand Tests
+## 6.3 Preferred Flavor Evidence
 
-Zustand Store 자체를 무조건 독립적으로 테스트하지 않는다.
-
-복잡한 Client State Transition이 존재할 때만 Store 테스트를 추가한다.
-
-예:
+Tests must verify actual intersections:
 
 ```text
-Question 1 Answer
-      ↓
-Next
-      ↓
-Question 2
-      ↓
-Back
-      ↓
-Question 1 Answer preserved
+user.preferredFlavors
+∩
+cocktail.flavors
 ```
 
-단순 modal open/close 수준의 상태에는 별도 Store Test가 필요하지 않을 수 있다.
+No user preference alone is sufficient.
+
+No cocktail Flavor alone is sufficient.
 
 ---
 
-# 22. React Query Tests
+## 6.4 Avoided Flavor Evidence
 
-React Query 자체를 테스트하지 않는다.
-
-우리 코드의 동작을 테스트한다.
-
-예:
+Tests must verify actual collisions:
 
 ```text
-Mutation Success
-      ↓
-Result displayed
+user.avoidedFlavors
+∩
+cocktail.flavors
 ```
 
-또는:
-
-```text
-Mutation Failure
-      ↓
-Answers preserved
-      ↓
-Retry available
-```
-
-TanStack Query 내부 caching algorithm을 테스트하지 않는다.
+Avoided Flavor evidence remains distinct from preferred Flavor evidence.
 
 ---
 
-# 23. Server Component Tests
+## 6.5 Preferred BaseSpirit Evidence
 
-SEO 또는 Server Rendering이 중요한 페이지에서는 핵심 콘텐츠가 Client-side fetch 이후에만 나타나는 구조가 아닌지 검증한다.
-
-대표 대상:
+Tests must verify:
 
 ```text
-Landing
-Cocktail Detail
+user.preferredBaseSpirits
+∩
+cocktail.baseSpirits
 ```
 
-Metadata는 필요한 수준에서 별도로 검증한다.
+BaseSpirit evidence must not be inferred from Flavor evidence.
 
 ---
 
-# 24. Architecture Tests
+# 7. Ranking Policy Tests
 
-Architecture Rule은 가능한 한 정적 검증한다.
+Ranking Policy tests are synthetic policy tests.
 
-대표 규칙:
+Their purpose is to protect Recommendation v1 semantics independently from realistic Golden fixtures.
+
+They must cover both Core-priority and close-Core behavior.
+
+---
+
+# 8. Core Priority Tests
+
+## RP-001 — Material Core Advantage Wins
+
+Given:
 
 ```text
-apps/web must not import apps/api
-
-apps/api must not import apps/web
-
-apps/web must not import typeorm
-
-packages/contracts must not import typeorm
-
-shared must not import entities
-
-shared must not import features
-
-entities must not import features
+A coreDistance = 2
+B coreDistance = 4
 ```
 
-검증 도구:
+then:
 
 ```text
-ESLint
+coreGap = 2
+```
+
+which exceeds the close-Core boundary.
+
+Expected:
+
+```text
+A > B
+```
+
+Secondary preference evidence must not overturn the material Core advantage.
+
+---
+
+## RP-002 — Large Secondary Advantage Cannot Reverse Material Core Mismatch
+
+Construct:
+
+```text
+A
+→ materially better Core
+→ no secondary matches
+
+B
+→ materially worse Core
+→ multiple preferred Flavor matches
+→ preferred BaseSpirit match
+```
+
+Expected:
+
+```text
+A > B
+```
+
+This protects Core priority.
+
+---
+
+## RP-003 — Material Core Boundary
+
+Explicitly test:
+
+```text
+coreGap = 2
+```
+
+Expected:
+
+```text
+material Core comparison
+```
+
+This protects the boundary immediately outside close-Core comparison.
+
+---
+
+# 9. Close-Core Ranking Tests
+
+The accepted close-Core boundary is:
+
+```text
+coreGap <= 1
+```
+
+Within this boundary, applicable Core and secondary evidence participate in semantic Pareto comparison.
+
+---
+
+## RP-004 — Same Core + Better Flavor
+
+Construct:
+
+```text
+A Core = B Core
+
+A preferred Flavor matches = 2
+B preferred Flavor matches = 1
+
+all other applicable evidence equal
+```
+
+Expected:
+
+```text
+A > B
+```
+
+This synthetic rule is represented realistically by G-001:
+
+```text
+Mojito > Tom Collins
+```
+
+---
+
+## RP-005 — Same Core + Better BaseSpirit
+
+Construct:
+
+```text
+A Core = B Core
+Flavor evidence equal
+Avoided evidence equal
+
+A preferred BaseSpirit match = 1
+B preferred BaseSpirit match = 0
+```
+
+Expected:
+
+```text
+A > B
+```
+
+This synthetic rule is represented realistically by G-004:
+
+```text
+Negroni > Americano
+```
+
+---
+
+## RP-006 — Same Core + Avoided Flavor Collision
+
+Construct two otherwise equivalent candidates.
+
+```text
+A avoided Flavor collisions = 0
+B avoided Flavor collisions = 1
+```
+
+Expected:
+
+```text
+A > B
+```
+
+Avoided Flavor evidence must remain ranking evidence and must not become a positive reason.
+
+---
+
+## RP-007 — Better Core vs Better Flavor
+
+Construct close-Core candidates:
+
+```text
+A
+→ better Core
+
+B
+→ better preferred Flavor evidence
+```
+
+with neither candidate no worse across all applicable evidence.
+
+Expected:
+
+```text
+A ↔ B
+```
+
+---
+
+## RP-008 — Better Core vs Better BaseSpirit
+
+Construct:
+
+```text
+A
+→ better Core
+
+B
+→ better preferred BaseSpirit evidence
+```
+
+within the close-Core boundary.
+
+Expected:
+
+```text
+A ↔ B
+```
+
+---
+
+## RP-009 — Better Core vs Multiple Secondary Advantages
+
+Construct:
+
+```text
+A
+→ better Core
+
+B
+→ better Flavor
+→ better BaseSpirit
+```
+
+within the close-Core boundary.
+
+Expected:
+
+```text
+A ↔ B
+```
+
+This behavior has a realistic Golden representative:
+
+```text
+Manhattan ↔ Dry Martini
+```
+
+where Dry Martini has better Core evidence while Manhattan has preferred Flavor and preferred BaseSpirit evidence.
+
+---
+
+# 10. Tie Tests
+
+## RP-010 — Identical Applicable Evidence
+
+Given two candidates with identical applicable:
+
+```text
+Core evidence
+preferred Flavor evidence
+avoided Flavor evidence
+preferred BaseSpirit evidence
+```
+
+Expected:
+
+```text
+A = B
+```
+
+This is a semantic tie.
+
+---
+
+## RP-011 — Partial-Profile Tie
+
+Unknown user dimensions must not break a tie.
+
+Construct a partial user profile where two candidates are identical across all known and applicable evidence.
+
+Expected:
+
+```text
+A = B
+```
+
+G-005 provides the canonical realistic example:
+
+```text
+Tom Collins = Mojito
+```
+
+---
+
+# 11. Incomparability Tests
+
+## RP-012 — Conflicting Applicable Evidence
+
+Construct close-Core candidates where different applicable dimensions favor different candidates.
+
+Expected:
+
+```text
+A ↔ B
+```
+
+Do not force a semantic winner through technical ordering.
+
+---
+
+## RP-013 — Incomparability Is Not Tie
+
+For an incomparable pair:
+
+```text
+A ↔ B
+```
+
+assert that the relationship is not:
+
+```text
+A = B
+```
+
+and not:
+
+```text
+A > B
+B > A
+```
+
+G-003 provides the canonical realistic example:
+
+```text
+Manhattan ↔ Dry Martini
+```
+
+---
+
+# 12. Semantic Layer Construction Tests
+
+Ranking Policy v1 may produce a partial order rather than one strict total order.
+
+Tests must verify semantic layer construction independently from presentation ordering.
+
+Example:
+
+```text
+A > C
+B > C
+A ↔ B
+```
+
+Expected semantic layers:
+
+```text
+Layer 1
+A, B
+
+Layer 2
+C
+```
+
+The relative technical presentation order of `A` and `B` does not change their semantic relationship.
+
+---
+
+## RP-014 — Non-Dominated Layer Construction
+
+Construct multiple candidates with:
+
+- dominance,
+- incomparability,
+- tie.
+
+Verify that all non-dominated candidates enter the same semantic layer where appropriate.
+
+---
+
+## RP-015 — Dominated Candidate Cannot Enter Higher Layer
+
+If:
+
+```text
+A > B
+```
+
+then `B` must not appear in a semantic layer above `A`.
+
+---
+
+# 13. Deterministic Presentation Tests
+
+Semantic ties and incomparability may still require deterministic output ordering.
+
+Presentation tests must verify:
+
+```text
+same inputs
+→ same technical order
+```
+
+without converting that order into semantic superiority.
+
+For:
+
+```text
+A ↔ B
+```
+
+it is valid for technical output to consistently show:
+
+```text
+A before B
+```
+
+provided tests do not reinterpret that as:
+
+```text
+A > B
+```
+
+The same applies to:
+
+```text
+A = B
+```
+
+---
+
+# 14. RecommendationResult Tests
+
+`RecommendationResult` tests protect the public recommendation boundary.
+
+Public results must expose only accepted public recommendation information.
+
+Internal ranking evidence must not leak.
+
+Examples of prohibited public fields include:
+
+```text
+rankingScore
+averageDistance
+coreSimilarity
+flavorAdjustment
+baseAdjustment
+secondaryAdjustment
+```
+
+or equivalent future private calculation fields.
+
+---
+
+## 14.1 Semantic Result Integrity
+
+`RecommendationResult.recommendations` must follow the deterministic presentation ordering produced by Ranking Policy v1. The public `rank` is a unique, ascending **presentation ordinal**, not a semantic dominance score or semantic layer identifier.
+
+Internal `semanticLayer`, `totalCoreDistance`, per-dimension distances, secondary evidence counts, and technical tie-break metadata must not be exposed through the public result. Assert their absence from serialized public results, not only from TypeScript interfaces.
+
+Presentation order alone must never be interpreted as semantic dominance: candidates in the same layer may be incomparable or tied even when their public `rank` values differ.
+
+---
+
+# 15. Reason Builder Tests
+
+Reason Builder tests are independent from Ranking Policy tests.
+
+A candidate ranking highly does not automatically create a reason.
+
+Reasons must derive from actual positive evidence.
+
+---
+
+## RB-001 — Positive Core Evidence
+
+A Core reason may be generated only from a known user dimension and actual cocktail comparison evidence accepted by Reason Builder v1.
+
+Unknown user dimensions cannot create reasons.
+
+---
+
+## RB-002 — Preferred Flavor Evidence
+
+Given:
+
+```text
+user prefers herbal
+cocktail has herbal
+```
+
+`herbal` may become a reason where allowed by the canonical reason policy.
+
+---
+
+## RB-003 — Preferred Flavor Without Cocktail Presence
+
+Given:
+
+```text
+user prefers herbal
+cocktail does not have herbal
+```
+
+Expected:
+
+```text
+no herbal reason
+```
+
+---
+
+## RB-004 — Preferred BaseSpirit Evidence
+
+Given:
+
+```text
+user prefers gin
+cocktail baseSpirits includes gin
+```
+
+`gin` may become a BaseSpirit reason where permitted.
+
+---
+
+## RB-005 — Preferred BaseSpirit Without Cocktail Presence
+
+Given:
+
+```text
+user prefers gin
+cocktail baseSpirits = []
+```
+
+Expected:
+
+```text
+no gin reason
+```
+
+G-004's Americano fixture protects this scenario realistically.
+
+---
+
+## RB-006 — Avoided Flavor Is Not Positive Reason
+
+An avoided Flavor collision may affect ranking evidence.
+
+It must not be emitted as a positive recommendation reason.
+
+---
+
+## RB-007 — Ranking Position Is Not Reason Evidence
+
+Do not generate reasons from:
+
+```text
+rank
+semantic layer
+technical tie-break
+presentation order
+```
+
+---
+
+## RB-008 — Deterministic Reason Construction
+
+Same accepted evidence and same Reason Builder version must produce the same structured reason result.
+
+---
+
+## 15.1 Exact Reason Selection Boundaries
+
+In addition to RB-001–RB-008, test the canonical Reason Builder v1 selection mechanics:
+
+- Core candidates require known user evidence and `dimensionDistance <= 1`; exclude distance `2` and above.
+- Sort qualifying Core dimensions by distance ascending, then `|userScore - 3|` descending, then canonical dimension order: `sweet`, `sour`, `bitter`, `alcoholIntensity`, `refreshing`.
+- Emit **at most two** Core dimensions, even when more than two qualify.
+- Emit preferred Flavor intersections in canonical Flavor vocabulary order (`citrus`, `fruity`, `tropical`, `herbal`, `floral`, `creamy`, `coffee`, `spicy`, `smoky`), maximum two.
+- Emit preferred BaseSpirit intersections in canonical BaseSpirit vocabulary order (`gin`, `vodka`, `rum`, `tequila`, `whiskey`, `mezcal`), maximum one.
+- Emit groups at most once each, in Core → Flavor → BaseSpirit order; omit empty groups; `reasons: []` is valid.
+- Do not infer reasons from avoided Flavor collisions, semantic layers, rank, or technical ordering.
+- Verify permutation invariance: changing only the order of `preferredFlavors` or `preferredBaseSpirits` does not change the selected reasons.
+- Use a synthetic cocktail with `flavors: ["herbal", "citrus", "fruity"]` and user `preferredFlavors: ["herbal", "fruity", "citrus"]`; expected emitted Flavor reasons are `["citrus", "fruity"]` for every permutation of the same preference set.
+- Use a synthetic cocktail with `baseSpirits: ["mezcal", "gin"]` and user `preferredBaseSpirits: ["mezcal", "gin"]`; expected emitted BaseSpirit reason is `["gin"]` for either preference order. These are synthetic tests, not changes to the 12 Golden cocktail fixtures.
+
+---
+
+# 16. Golden Tests
+
+Golden Tests combine canonical personas with Golden Cocktail Fixtures v1.
+
+They protect representative Recommendation v1 behavior.
+
+They must use stable fixture IDs.
+
+---
+
+# 17. G-001 Integration — Bright & Refreshing
+
+Canonical semantic assertions:
+
+```text
+Mojito > Tom Collins
+
+Mojito > Negroni
+
+Tom Collins > Negroni
+
+Margarita > Mezcal Margarita
+```
+
+Primary behavior:
+
+```text
+same-Core + preferred Flavor advantage
+→ semantic dominance
+```
+
+The test must specifically protect:
+
+```text
+Mojito > Tom Collins
+```
+
+because both candidates have identical canonical Core evidence while Mojito has additional preferred `herbal` evidence.
+
+The test must not assert:
+
+```text
+Mojito ↔ Tom Collins
+```
+
+---
+
+# 18. G-002 Integration — Sweet & Tropical
+
+Canonical semantic assertions:
+
+```text
+Piña Colada > Tequila Sunrise
+
+Piña Colada > Mojito
+
+Piña Colada > Espresso Martini
+```
+
+This Golden protects:
+
+- strong Core compatibility,
+- preferred Flavor support,
+- preferred BaseSpirit support,
+- avoided Flavor behavior,
+- material Core priority.
+
+---
+
+# 19. G-003 Integration — Dry & Spirit-forward
+
+Canonical semantic assertions:
+
+```text
+Old Fashioned > Manhattan
+
+Old Fashioned > Dry Martini
+
+Manhattan ↔ Dry Martini
+```
+
+Primary behavior:
+
+```text
+material Core priority
 +
-Architecture Validation Script
+close-Core Core-vs-secondary trade-off
 ```
 
-단순 import restriction은 ESLint를 우선한다.
-
-여러 파일이나 구조를 분석해야 하는 규칙은 별도 script를 사용할 수 있다.
-
----
-
-# 25. Product Invariant Mapping
-
-Product Invariant와 Test를 연결한다.
-
-| Invariant                        | Primary Protection                  |
-| -------------------------------- | ----------------------------------- |
-| P-001 Anonymous Test             | E2E                                 |
-| P-002 No Expert Knowledge        | Product review + E2E/content review |
-| P-003 Complete Answers           | Domain + API Integration            |
-| P-004 Explainable Recommendation | Domain + E2E                        |
-| P-005 Deterministic Core         | Domain + Golden                     |
-| P-006 Recoverable Failure        | Frontend + E2E                      |
-| P-007 Result Independence        | Frontend + E2E                      |
-| P-008 Primary CTA                | E2E                                 |
-
-모든 Product Principle을 자동 테스트할 수 있다고 가정하지 않는다.
-
-예를 들어 "질문이 일반 사용자에게 이해하기 쉬운가?"는 자동 테스트보다 Product Review가 적합하다.
-
----
-
-# 26. Domain Invariant Mapping
-
-| Invariant | Primary Test         |
-| --------- | -------------------- |
-| A-001     | Domain / Application |
-| A-002     | Domain               |
-| A-003     | Domain               |
-| A-004     | Domain + API         |
-| A-005     | Domain / Application |
-| T-001     | Domain               |
-| T-002     | Domain               |
-| T-003     | Domain               |
-| T-004     | Domain               |
-| T-005     | Domain               |
-| C-001     | Domain + Integration |
-| C-002     | Domain               |
-| C-003     | Domain               |
-| C-004     | Dataset Validation   |
-| C-005     | Dataset Validation   |
-| R-001     | Domain + Golden      |
-| R-002     | Domain               |
-| R-003     | Domain               |
-| R-004     | Domain + E2E         |
-| R-005     | Domain               |
-| R-006     | Domain               |
-
-이 Mapping은 새로운 Invariant가 추가될 때 함께 업데이트한다.
-
----
-
-# 27. Core E2E Test
-
-E2E는 모든 세부 기능을 테스트하는 용도로 사용하지 않는다.
-
-가장 중요한 E2E는 Core Product Loop다.
+The critical incomparability assertion is:
 
 ```text
-Landing
-   ↓
-Start Assessment
-   ↓
-Answer Questions
-   ↓
-Complete Assessment
-   ↓
-Taste Profile
-   ↓
-Recommendations
-   ↓
-Recommendation Reason
-   ↓
-Explore Cocktail
-   ↓
-Share Result
+Manhattan ↔ Dry Martini
 ```
 
-이 흐름을 최소 하나의 Critical E2E Scenario로 보호한다.
-
----
-
-# 28. Core E2E Scenario
-
-개념적인 테스트:
-
-```ts
-test("anonymous visitor can complete the core cocktail taste flow", async ({ page }) => {
-  await page.goto("/");
-
-  await expect(
-    page.getByRole("button", {
-      name: "테스트 시작하기",
-    }),
-  ).toBeVisible();
-
-  await page
-    .getByRole("button", {
-      name: "테스트 시작하기",
-    })
-    .click();
-
-  // Answer every required question.
-
-  await expect(page.getByText("나의 칵테일 취향")).toBeVisible();
-
-  await expect(page.getByText("추천 칵테일")).toBeVisible();
-
-  // Verify recommendation explanation.
-
-  // Open a cocktail.
-
-  // Verify share action.
-});
-```
-
-실제 selector와 route는 구현 이후 결정한다.
-
----
-
-# 29. Failure Recovery E2E
-
-Core Loop에는 최소 하나의 실패 복구 시나리오를 고려한다.
-
-예:
+because:
 
 ```text
-Answer Questions
-       ↓
-Submit
-       ↓
-Temporary API Failure
-       ↓
-Error UI
-       ↓
-Answers Still Present
-       ↓
-Retry
-       ↓
-Success
+Dry Martini
+→ better Core evidence
+
+Manhattan
+→ preferred spicy evidence
+→ preferred whiskey evidence
 ```
 
-P-006을 보호하는 중요한 테스트다.
+and the Core gap remains inside the close-Core boundary.
 
----
-
-# 30. E2E Scope
-
-E2E에 모든 edge case를 넣지 않는다.
-
-E2E는 다음에 집중한다.
-
-- 핵심 사용자 흐름
-- Layer 간 연결
-- Routing
-- 중요한 Client/Server integration
-- 실패 복구
-- 사용자 관점의 결과
-
-세부 알고리즘 edge case는 Domain Test에서 처리한다.
-
----
-
-# 31. External Dependencies
-
-외부 Cocktail API가 존재하더라도 Unit/E2E Test가 항상 실제 외부 서비스에 의존하지 않도록 한다.
+The test must explicitly verify that this pair is:
 
 ```text
-External API
-     ↓
-Adapter
-     ↓
-Controlled Test Boundary
-```
-
-외부 API 장애가 우리 CI를 임의로 실패시키지 않도록 한다.
-
-외부 integration 자체를 확인해야 한다면 별도 smoke/integration test로 분리한다.
-
----
-
-# 32. Fixtures
-
-공통 Test Fixture를 명시적으로 관리한다.
-
-예:
-
-```text
-tests/
-├── fixtures/
-│   ├── assessments/
-│   ├── cocktails/
-│   └── taste-profiles/
-│
-└── golden/
-```
-
-Fixture는 실제 Domain을 이해하기 쉬운 이름을 사용한다.
-
-예:
-
-```text
-CITRUS_REFRESHING_PROFILE
-RICH_BITTER_PROFILE
-
-MOJITO_PROFILE
-OLD_FASHIONED_PROFILE
-```
-
-`testData1`, `mock2` 같은 이름은 피한다.
-
----
-
-# 33. Test Data Size
-
-Unit/Domain Test에서는 가능한 한 작은 Dataset을 사용한다.
-
-예:
-
-```text
-3 Cocktails
-5 Taste Dimensions
-```
-
-전체 Production Dataset이 필요하지 않은 테스트에서 모든 Cocktail을 로드하지 않는다.
-
-Golden/Dataset Validation Test에서는 실제 Dataset 또는 대표 Snapshot을 사용할 수 있다.
-
----
-
-# 34. Test Location
-
-테스트는 가능한 한 테스트 대상과 가까운 위치에 둔다.
-
-예:
-
-```text
-recommendation/
-├── calculate-match.ts
-├── calculate-match.test.ts
-├── rank-recommendations.ts
-└── rank-recommendations.test.ts
-```
-
-Cross-domain Golden/E2E 테스트는 root `tests/`에서 관리할 수 있다.
-
----
-
-# 35. Naming
-
-테스트 이름은 구현 방법보다 기대 행동을 설명한다.
-
-Bad:
-
-```text
-calls repository
-test recommendation
-works correctly
-```
-
-Preferred:
-
-```text
-rejects an option that does not belong to the question
-
-returns the same ranking for the same versioned input
-
-preserves answers when assessment submission fails
+not a tie
+not Manhattan > Dry Martini
+not Dry Martini > Manhattan
 ```
 
 ---
 
-# 36. Coverage Policy
+# 20. G-004 Integration — Bitter & Smoky
 
-초기에는 arbitrary coverage percentage를 성공 기준으로 설정하지 않는다.
-
-예:
+Canonical semantic assertions:
 
 ```text
-Coverage 90% = Quality
+Negroni > Americano
+
+Americano > Mezcal Margarita
+
+Negroni > Mezcal Margarita
 ```
 
-라고 가정하지 않는다.
-
-대신 다음을 우선한다.
+Primary behavior:
 
 ```text
-Critical Invariant Coverage
-Core Use Case Coverage
-Failure Path Coverage
+same-Core + preferred BaseSpirit advantage
+→ semantic dominance
 ```
 
-Coverage report는 테스트가 부족한 영역을 발견하는 보조 지표로 사용한다.
-
-실제 baseline이 확보되면 threshold 도입을 검토한다.
-
----
-
-# 37. Flaky Test Policy
-
-Flaky Test를 정상 상태로 받아들이지 않는다.
-
-테스트가 반복적으로 비결정적으로 실패하면 다음 중 하나를 수행한다.
-
-- 원인을 수정한다.
-- 테스트 설계를 수정한다.
-- 외부 dependency를 격리한다.
-
-단순히 retry 횟수를 늘려 문제를 숨기지 않는다.
-
----
-
-# 38. Local Verification
-
-개발자는 변경 범위에 맞는 테스트를 먼저 실행한다.
-
-예:
+For `Negroni` and `Americano`:
 
 ```text
-Recommendation 변경
+Core evidence
+→ equal
 
-→ recommendation domain tests
-→ golden tests
-→ pnpm check
+preferred herbal evidence
+→ equal
+
+avoided creamy evidence
+→ equal
+
+preferred gin evidence
+→ Negroni only
 ```
 
-전체 작업 완료 전에는 root verification을 실행한다.
+Expected:
 
 ```text
-pnpm check
+Negroni > Americano
+```
+
+The test must not assert:
+
+```text
+Americano ↔ Negroni
 ```
 
 ---
 
-# 39. pnpm check
+# 21. G-005 Integration — Uncertain Beginner
 
-목표 구조:
+Canonical semantic assertion:
 
 ```text
-pnpm check
-│
-├── lint
-├── typecheck
-├── test:unit
-├── test:architecture
-└── build
+Tom Collins = Mojito
 ```
 
-Golden Test가 충분히 빠르면 `test:unit` 또는 기본 `check`에 포함한다.
+Primary behavior:
 
-실행 시간이 증가하면 별도 command로 분리하되 CI에서는 반드시 실행한다.
+```text
+partial profile
++
+identical applicable evidence
+→ semantic tie
+```
+
+Only:
+
+```text
+sour
+refreshing
+```
+
+are known Core Dimensions.
+
+Unknown dimensions must not break the tie.
+
+No absent Flavor or BaseSpirit preference may be fabricated to distinguish the candidates.
 
 ---
 
-# 40. CI Verification
+# 22. Cross-Golden Regression Matrix
 
-CI에서는 최소 다음을 검증한다.
+Golden Tests collectively protect:
 
-```text
-pnpm install --frozen-lockfile
+| Behavior                               | Canonical Golden |
+| -------------------------------------- | ---------------- |
+| Same-Core + Flavor dominance           | G-001            |
+| Multi-signal / material Core dominance | G-002            |
+| Close-Core incomparability             | G-003            |
+| Same-Core + BaseSpirit dominance       | G-004            |
+| Partial-profile semantic tie           | G-005            |
 
-pnpm lint
-pnpm typecheck
-pnpm test
-pnpm test:architecture
-pnpm build
-```
-
-DB Integration/E2E 환경이 구축되면 다음을 추가한다.
+Important canonical relationships:
 
 ```text
-migration verification
-integration tests
-core E2E
+G-001
+Mojito > Tom Collins
+
+G-003
+Manhattan ↔ Dry Martini
+
+G-004
+Negroni > Americano
+
+G-005
+Tom Collins = Mojito
 ```
 
-최종 command 구성은 실제 실행 시간을 측정한 후 결정한다.
+These four relationships must not be collapsed into one generic ordering behavior.
+
+They represent four different evidence states.
 
 ---
 
-# 41. Fast Check vs Full Check
+# 23. Golden Reason Assertions
 
-프로젝트가 커지면 두 단계로 분리할 수 있다.
+Golden integration tests should verify structured reason evidence where the canonical Golden Case defines it.
+
+Examples:
 
 ```text
-pnpm check
+G-001 Mojito
+→ supported Core reasons
+→ citrus
+→ herbal
 ```
 
-빠른 local feedback:
+```text
+G-002 Piña Colada
+→ supported Core reasons
+→ tropical
+→ creamy
+→ rum
+```
+
+```text
+G-003 Old Fashioned
+→ supported Core reasons
+→ spicy
+→ whiskey
+```
+
+```text
+G-004 Americano
+→ supported Core reasons
+→ herbal
+→ no fabricated gin
+→ no fabricated smoky
+```
+
+```text
+G-005
+→ sour
+→ refreshing
+→ no reasons from unknown Core dimensions
+```
+
+Golden reason assertions must follow Reason Builder v1 rather than inferring reasons from ranking expectations.
+
+---
+
+## 23.1 Exact Golden Reason Regression Assertions
+
+Use the **emitted** structured reason arrays, not all qualifying underlying evidence. Assert group order and the order of values within each group:
+
+| Golden / Cocktail | `core-match.dimensions` | `flavor-match.flavors` | `base-spirit-match.baseSpirits` |
+| --- | --- | --- | --- |
+| G-001 / Mojito | `bitter`, `refreshing` | `citrus`, `herbal` | absent |
+| G-002 / Piña Colada | `sweet`, `bitter` | `tropical`, `creamy` | `rum` |
+| G-003 / Old Fashioned | `sour`, `alcoholIntensity` | `spicy` | `whiskey` |
+| G-004 / Americano | `sour`, `bitter` | `herbal` | absent |
+| G-005 / Mojito | `refreshing`, `sour` | absent | absent |
+| G-005 / Tom Collins | `refreshing`, `sour` | absent | absent |
+
+Specifically reject these stale expectations:
+
+- G-002 Piña Colada: `sweet`, `sour` as the final Core reason;
+- G-003 Old Fashioned: four emitted Core dimensions rather than the selected two;
+- G-005: `sour`, `refreshing` as the final ordered Core reason.
+
+The fixed Golden ranking relationships remain unchanged. A change in emitted reasons must not silently change Ranking Policy or cocktail fixture values.
+
+---
+
+# 24. Golden Fixture Integrity Tests
+
+Golden Cocktail Fixtures v1 should have dedicated integrity tests.
+
+These tests protect the canonical fixture dataset itself.
+
+Required checks include:
+
+```text
+exactly 12 canonical fixture IDs
+unique fixture IDs
+valid TasteScore values
+canonical Flavor values only
+canonical BaseSpirit values only
+Flavor/BaseSpirit separation
+Americano baseSpirits remains empty
+```
+
+Fixture integrity tests should fail if a fixture is silently recalibrated.
+
+A fixture semantic change requires explicit domain review.
+
+---
+
+# 25. Regression Tests for 2026-10-05 Calibration
+
+The following stale expectations must have explicit regression protection:
+
+```text
+OLD
+Mojito ↔ Tom Collins
+
+NEW
+Mojito > Tom Collins
+```
+
+```text
+OLD
+Manhattan > Dry Martini
+
+NEW
+Manhattan ↔ Dry Martini
+```
+
+```text
+OLD
+Americano ↔ Negroni
+
+NEW
+Negroni > Americano
+```
+
+These regressions protect the independently authored Golden Cocktail Fixtures v1 from accidental restoration of pre-fixture assumptions.
+
+Ranking Policy v1 did not change during this calibration.
+
+---
+
+# 26. Architecture Tests
+
+Architecture tests protect domain boundaries.
+
+They should verify that:
+
+```text
+domain
+```
+
+does not depend on:
+
+```text
+UI
+framework-specific presentation
+transport DTOs
+production API response shapes
+```
+
+unless explicitly allowed by the architecture.
+
+Recommendation domain models should remain usable independently from presentation concerns.
+
+---
+
+## 26.1 Public/Internal Boundary
+
+Architecture or type-level tests should protect the boundary between:
+
+```text
+RecommendationMatch
+→ internal evidence
+```
+
+and:
+
+```text
+RecommendationResult
+→ public result
+```
+
+Internal calculation evidence must not leak accidentally through public result types.
+
+---
+
+# 27. Property and Invariant Tests
+
+Where practical, property-based or table-driven tests should protect general invariants.
+
+Useful properties include:
+
+### Distance symmetry
+
+```text
+|a - b|
+=
+|b - a|
+```
+
+### Distance bounds
+
+For `TasteScore = 1..5`:
+
+```text
+0 <= distance <= 4
+```
+
+### Unknown exclusion
+
+Adding an unknown user dimension must not change the existing known-dimension comparison.
+
+### Determinism
+
+Repeated evaluation of the same versioned inputs produces the same semantic result.
+
+### Dominance consistency
+
+If `A > B`, then the same evidence must not simultaneously produce:
+
+```text
+B > A
+```
+
+### Tie symmetry
+
+If:
+
+```text
+A = B
+```
+
+then:
+
+```text
+B = A
+```
+
+### Incomparability symmetry
+
+If:
+
+```text
+A ↔ B
+```
+
+then:
+
+```text
+B ↔ A
+```
+
+---
+
+# 28. Failure Interpretation
+
+A failing test should first be classified by layer.
+
+```text
+Assessment failure
+→ transformation issue
+
+RecommendationMatch failure
+→ evidence construction issue
+
+Ranking Policy failure
+→ semantic comparison issue
+
+Reason Builder failure
+→ explanation issue
+
+Golden failure
+→ integration / fixture / canonical expectation issue
+
+Architecture failure
+→ boundary violation
+```
+
+Do not immediately update a Golden expectation because an implementation test fails.
+
+For Golden failures:
+
+```text
+inspect implementation
+→ inspect fixture
+→ inspect policy
+→ inspect canonical expectation
+```
+
+before changing accepted domain behavior.
+
+---
+
+# 29. Test Data Policy
+
+Use the smallest fixture set capable of proving the intended rule.
+
+For synthetic Ranking Policy tests:
+
+```text
+minimal synthetic profiles
+```
+
+are preferred.
+
+For Golden tests:
+
+```text
+Golden Cocktail Fixtures v1
+```
+
+are required.
+
+For production-data tests:
+
+```text
+mutable production dataset
+```
+
+may be used only for separate dataset validation and must not define Golden semantics.
+
+---
+
+# 30. CI Expectations
+
+Phase 1 CI should verify, at minimum:
 
 ```text
 lint
 typecheck
-unit
-architecture
+unit tests
+Ranking Policy tests
+Reason Builder tests
+Golden tests
+architecture checks
 build
 ```
 
-그리고:
+Where repository tooling separates packages or workspaces, the equivalent canonical commands should be used.
+
+An environment-specific infrastructure failure must be distinguished from a semantic test failure.
+
+For example:
 
 ```text
-pnpm check:ci
+process spawn failure
 ```
 
-전체 검증:
+must not be reported as:
 
 ```text
-pnpm check
-integration
-migration
-golden
-E2E
+Ranking Policy regression
 ```
 
-초기에는 복잡성을 줄이기 위해 하나의 `pnpm check`로 시작해도 된다.
+unless the relevant test actually executed and failed semantically.
 
 ---
 
-# 42. Codex Verification Rule
+# 31. Phase 1 Acceptance Criteria
 
-Codex가 기능을 구현하거나 수정한 경우 변경 범위에 해당하는 테스트를 추가하거나 수정해야 한다.
+Testing Strategy v1 is satisfied when automated tests protect:
 
-작업 완료 전 가능한 검증을 실행한다.
+- canonical `TasteScore`,
+- five Core Dimensions,
+- unknown-dimension absence semantics,
+- canonical Flavor evidence,
+- canonical BaseSpirit evidence,
+- RecommendationMatch distance construction,
+- preferred Flavor matching,
+- avoided Flavor collisions,
+- preferred BaseSpirit matching,
+- material Core priority,
+- close-Core Pareto comparison,
+- semantic dominance,
+- semantic tie,
+- semantic incomparability,
+- semantic layer construction,
+- deterministic presentation ordering,
+- public/internal recommendation boundaries,
+- structured positive-only reasons,
+- Golden Cocktail Fixtures v1,
+- five canonical Golden personas,
+- complete eight-question Assessment-to-profile Golden traces,
+- exact ordered Reason Builder selection and Golden reason arrays,
+- no-Golden-backsolving,
+- fixed-fixture isolation.
 
-최소 목표:
-
-```text
-Relevant Tests
-      ↓
-pnpm check
-```
-
-테스트가 실패한 상태에서 작업을 완료했다고 보고하지 않는다.
-
-환경 문제 등으로 검증할 수 없는 항목이 있다면 명시적으로 보고한다.
-
----
-
-# 43. Bug Fix Rule
-
-버그를 수정할 때 가능하면 다음 순서를 따른다.
-
-```text
-Bug
- ↓
-Reproduce with Test
- ↓
-Test Fails
- ↓
-Fix
- ↓
-Test Passes
- ↓
-pnpm check
-```
-
-즉 버그 수정은 가능한 경우 Regression Test를 남긴다.
-
----
-
-# 44. Feature Rule
-
-새로운 Feature에는 다음을 고려한다.
+The canonical Golden regression anchors are:
 
 ```text
-Feature Requirement
-       ↓
-Which invariant/use case changes?
-       ↓
-Test Plan
-       ↓
-Implementation
-       ↓
-Relevant Tests
-       ↓
-pnpm check
+G-001
+Mojito > Tom Collins
+
+G-002
+Piña Colada > Tequila Sunrise
+Piña Colada > Mojito
+Piña Colada > Espresso Martini
+
+G-003
+Old Fashioned > Manhattan
+Old Fashioned > Dry Martini
+Manhattan ↔ Dry Martini
+
+G-004
+Negroni > Americano
+Americano > Mezcal Margarita
+Negroni > Mezcal Margarita
+
+G-005
+Tom Collins = Mojito
 ```
 
-테스트를 구현이 끝난 뒤 생각하는 부가 작업으로 취급하지 않는다.
+These relationships describe semantic recommendation behavior.
 
----
-
-# 45. Domain Change Rule
-
-다음 영역을 변경할 때는 특별히 주의한다.
-
-```text
-Taste Dimensions
-Question Effects
-Scoring
-Cocktail Profiles
-Recommendation Algorithm
-Ranking
-```
-
-변경 시 검토:
-
-```text
-Domain Tests
-Golden Tests
-Version Change
-Existing Result Compatibility
-Documentation
-ADR 필요 여부
-```
-
----
-
-# 46. Test Review Questions
-
-PR 또는 Codex 작업 결과를 검토할 때 다음을 확인한다.
-
-### Product
-
-Core Loop가 유지되는가?
-
-### Domain
-
-새로운 Domain Rule에 테스트가 있는가?
-
-### Failure
-
-실패 경로를 고려했는가?
-
-### Boundary
-
-잘못된 입력을 신뢰하고 있지 않은가?
-
-### Recommendation
-
-결과가 재현 가능한가?
-
-### Architecture
-
-금지된 dependency가 생기지 않았는가?
-
-### Regression
-
-수정한 버그가 다시 발생하지 않도록 보호되는가?
-
----
-
-# 47. Initial Tool Direction
-
-구체적인 도구 버전은 Repository 초기화 시 결정한다.
-
-현재 방향은 다음과 같다.
-
-### Unit / Domain / Frontend
-
-Vitest 기반 구성을 우선 검토한다.
-
-Frontend DOM 테스트가 필요한 경우 Testing Library 계열을 사용할 수 있다.
-
-### E2E
-
-Playwright를 우선 검토한다.
-
-### Backend Integration
-
-NestJS testing utilities와 실제 PostgreSQL test environment를 조합하는 방식을 검토한다.
-
-도구 선택보다 테스트 Boundary와 목적을 우선한다.
-
----
-
-# 48. Definition of Test-complete Change
-
-변경 사항이 테스트 관점에서 완료되었다고 판단하려면 다음을 만족해야 한다.
-
-- 변경된 행동을 검증하는 적절한 테스트가 존재한다.
-- 관련 Domain Invariant가 유지된다.
-- 실패 경로가 필요한 경우 검증되어 있다.
-- Architecture Rule 위반이 없다.
-- 기존 Regression Test가 통과한다.
-- Recommendation 변경이면 Golden Test 영향을 검토했다.
-- `pnpm check`가 통과한다.
-
-검증하지 못한 항목이 있다면 그 이유를 명시한다.
-
----
-
-# 49. Testing Goal
-
-이 프로젝트의 테스트 전략은 다음 상황을 만드는 것이 목표다.
-
-```text
-Developer / Codex
-       ↓
-Change Code
-       ↓
-Automated Feedback
-       ↓
-"무엇이 깨졌는지" 확인
-       ↓
-Fix
-       ↓
-pnpm check
-       ↓
-Confidence to Merge
-```
-
-테스트의 최종 목적은 코드의 존재를 확인하는 것이 아니라,
-
-> **제품의 중요한 약속과 Domain Rule을 변경으로부터 보호하는 것이다.**
+They do not require a complete total order across all candidates.

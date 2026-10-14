@@ -14,7 +14,7 @@ type FlavorMatchReason = { type: "flavor-match"; flavors: Flavor[] };
 type BaseSpiritMatchReason = { type: "base-spirit-match"; baseSpirits: BaseSpirit[] };
 ```
 
-Core candidates use known dimensions and `dimensionDistance <= 1`, ordered by distance ascending, distinctiveness (`|userScore - 3|`) descending, then: `sweet`, `sour`, `bitter`, `alcoholIntensity`, `refreshing`; include at most two. Flavor candidates are actual preferred matches in user-preference order (at most two). BaseSpirit candidates are actual preferred matches in user-preference order (at most one). Groups are core, Flavor, BaseSpirit and each occurs at most once. `reasons: []` is valid. Avoid collisions are not v1 reasons.
+Core candidates use known dimensions and `dimensionDistance <= 1`, ordered by distance ascending, distinctiveness (`|userScore - 3|`) descending, then: `sweet`, `sour`, `bitter`, `alcoholIntensity`, `refreshing`; include at most two. Flavor candidates are actual preferred matches sorted by canonical Flavor vocabulary order (`citrus`, `fruity`, `tropical`, `herbal`, `floral`, `creamy`, `coffee`, `spicy`, `smoky`), at most two. BaseSpirit candidates are actual preferred matches sorted by canonical BaseSpirit vocabulary order (`gin`, `vodka`, `rum`, `tequila`, `whiskey`, `mezcal`), at most one. The ordering is a technical tie-break only: multi-select input order carries no preference strength. Permuting preference arrays must not change emitted reasons. Groups are core, Flavor, BaseSpirit and each occurs at most once. `reasons: []` is valid. Avoid collisions are not v1 reasons.
 
 ## Invariants
 
