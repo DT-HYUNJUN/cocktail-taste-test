@@ -1,17 +1,17 @@
-Status: Proposed
+Status: Accepted
 Version: v1
 Phase: 3 / P3-03
-Date: 2026-10-14
+Last Updated: 2026-10-15
 
-# Cocktail Dataset v1 — Design Proposal
+# Cocktail Dataset v1 — Accepted Design
 
 ## 1. Purpose and scope
-Define the initial production cocktail catalog, its provenance, calibration, validation, and seed workflow. This document does not change Phase 1 canonical vocabulary, Phase 2 domain policy, or fixed Golden fixtures. No production ratings are approved by this proposal alone.
+Define the initial production cocktail catalog, its provenance, calibration, validation, and seed workflow. This accepted design does not change Phase 1 canonical vocabulary, Phase 2 domain policy, or fixed Golden fixtures. **Acceptance of the dataset design does not approve any production cocktail scores, recipes, or image rights.**
 
 ## 2. Dataset approach
 - Start with a **reviewable pilot of 12 cocktail identities**, corresponding to the names used by the canonical Golden fixtures: Mojito, Tom Collins, Negroni, Margarita, Mezcal Margarita, Piña Colada, Tequila Sunrise, Espresso Martini, Old Fashioned, Manhattan, Dry Martini, Americano.
 - The list is a **candidate catalog**, not approved production data. Confirm recipes, variants, legal image usage, and ratings individually.
-- Use the existing `cocktails` single-table schema from P3-02 as the intended storage target; verify the actual database document before implementation.
+- Use the accepted P3-02 `cocktails` single-table schema as the storage target; verify the implemented migration against this design before importing data.
 - A future dataset can expand only after the pilot passes coverage and review checks.
 
 ## 3. Golden fixture isolation
@@ -36,7 +36,7 @@ BaseSpirit is presence-only from: gin, vodka, rum, tequila, whiskey, mezcal. Spi
 ## 6. Review and acceptance
 - Two-pass review recommended: author proposes a profile with evidence; reviewer confirms each of five scores and all secondary tags. For solo development, use separate author/review sessions and retain rationale.
 - Review disagreements are resolved against source recipe and sensory rubric; record the resolution.
-- Do not activate (`is_active=true`) records with incomplete review, missing dimensions, unsupported tags, duplicate IDs, or missing source identity.
+- Do not activate (`is_active=true`) records with incomplete review, missing dimensions, unsupported tags, duplicate IDs, or missing source identity. New records default to `is_active=false`; approval is documented in seed provenance/review records rather than an additional DB `review_status` column.
 - Every active row must map to a valid `CocktailProfile` and yield deterministic recommendations for a fixed dataset snapshot.
 - Candidate coverage should include all six BaseSpirit tags where sensible, flavor variety, low/high examples on each core dimension, and legitimate empty BaseSpirit arrays; coverage is a goal, not permission to fabricate tags.
 
@@ -49,7 +49,7 @@ BaseSpirit is presence-only from: gin, vodka, rum, tequila, whiskey, mezcal. Spi
 - Store image URL separately; nullable URL does not affect ranking.
 
 ## 8. Candidate selection and recommendation count
-Not decided by this document. The Domain `buildRecommendationResult` receives an *already eligible* set and does not filter or truncate it. Define candidate eligibility, active filtering, and result limit explicitly before implementing the endpoint. Database query order must not change deterministic domain output.
+**Accepted MVP policy:** Only reviewed/approved records may be activated, and the repository reads all rows with `is_active = true`. The Domain `buildRecommendationResult` receives this complete eligible set and does not filter or truncate it. The application service then returns at most the first **five** presentation-ordered recommendations; 0–4 candidates return 0–4 results. Never apply SQL `LIMIT 5` before ranking. Presentation ranks reflect deterministic display order, not an assertion of absolute semantic superiority between incomparable candidates. Database query order must not change deterministic Domain output.
 
 ## 9. Proposed implementation layout
 ```text
@@ -70,21 +70,21 @@ File names are proposals; align with accepted backend/database docs during imple
 1. Seed schema/vocabulary/score validation, including invalid-input rejection.
 2. Stable ID uniqueness and idempotent re-seeding.
 3. Entity-to-Domain mapping, including rejection of corrupted database rows.
-4. Active candidate selection, deterministic ordering independent of DB return order.
+4. Active candidate selection (inactive excluded), deterministic ordering independent of DB return order, and five-result post-ranking limit (including 0–4 cases).
 5. Integration test with an isolated test DB when infrastructure is available.
 6. Fixed Golden tests remain independent and unchanged.
 
 ## 11. Deferred decisions
 - Actual approved production ratings and source verification.
 - Final recipe variants, catalog size beyond pilot, image licensing.
-- Eligibility/filtering rules and number of results returned.
+- Future eligibility extensions or alternative recommendation counts beyond the accepted MVP active-only, max-five policy.
 - Database infrastructure and migration/seed execution environment.
 
 ## 12. Acceptance criteria for P3-03 design
-- [ ] Confirm initial catalog candidates and variant policy.
-- [ ] Approve score/tag rubric and evidence review policy.
-- [ ] Approve seed/migration separation and Golden isolation.
-- [ ] Resolve active-candidate selection and result-limit policy before API implementation.
-- [ ] Review compatibility with the actual committed P3-02 schema.
+- [x] Confirm the 12 candidate identities and requirement to verify recipe variants before production approval.
+- [x] Approve score/tag rubric and evidence review policy (individual production ratings remain unapproved).
+- [x] Approve seed/migration separation and Golden isolation.
+- [x] Resolve active-candidate selection (`is_active = true` after approval) and post-ranking maximum of five results.
+- [x] Review compatibility with the committed P3-02 database design (implementation migration still pending).
 
-Decision requested: approve this proposal as the basis for collecting independently reviewed production profiles, without treating Golden fixture scores as production truth.
+Decision: accept this v1 design as the basis for collecting independently reviewed production profiles. Golden fixture scores are not production truth; the 12 candidate profiles and sources require separate approval.

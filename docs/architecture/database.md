@@ -1,15 +1,15 @@
-Status: Proposed
+Status: Accepted
 Version: v1
 Phase: 3 / P3-02
-Last Updated: 2026-10-14
+Last Updated: 2026-10-15
 
 # Database Design — Cocktail Catalog v1
 
 ## 1. Scope and source of truth
 
-Design the PostgreSQL persistence model for the cocktail catalog used by `POST /recommendations`. This is a **proposal for review**, not a migration or implemented schema. Phase 2 `CocktailProfile` is the recommendation-domain contract; database rows are not domain objects.
+Design the PostgreSQL persistence model for the cocktail catalog used by `POST /recommendations`. This is an **accepted v1 design**, not a migration or implemented schema. Phase 2 `CocktailProfile` is the recommendation-domain contract; database rows are not domain objects.
 
-In scope: cocktail identity, display metadata, five core scores, canonical flavor/base-spirit signals, active status, migration/validation strategy, repository mapping. Out of scope: user accounts, saving assessment submissions, ingredients/recipes, ratings, and analytics. Candidate eligibility and final recommendation count remain pending P3-03 dataset decisions.
+In scope: cocktail identity, display metadata, five core scores, canonical flavor/base-spirit signals, active status, migration/validation strategy, repository mapping. Out of scope: user accounts, saving assessment submissions, ingredients/recipes, ratings, and analytics. Candidate eligibility is `is_active = true` after provenance/profile review; the application returns up to five results after Domain ranking, never by SQL `LIMIT 5`.
 
 ## 2. Decision DB-001: one table with native arrays
 
@@ -27,7 +27,7 @@ Use one `cocktails` table with five `SMALLINT` columns and `TEXT[]` columns for 
 | `refreshing` | `SMALLINT` | NO | Core score 1–5 |
 | `flavors` | `TEXT[]` | NO | Unique canonical flavors; default empty array |
 | `base_spirits` | `TEXT[]` | NO | Unique canonical base spirits; default empty array |
-| `is_active` | `BOOLEAN` | NO | Catalog availability flag; default true |
+| `is_active` | `BOOLEAN` | NO | Catalog availability flag; default false (requires explicit approval to activate) |
 | `created_at` | `TIMESTAMPTZ` | NO | Persistence metadata |
 | `updated_at` | `TIMESTAMPTZ` | NO | Persistence metadata |
 
@@ -79,12 +79,12 @@ The snippet is conceptual; `row` is validated first and its numeric values must 
 
 Application Service depends on a `CocktailCatalogReader` interface/DI token; TypeORM implementation stays inside `apps/api`. Repository retrieves candidate rows and converts them to validated domain profiles plus display metadata. Do not import TypeORM from `packages/domain` or `packages/contracts`.
 
-Proposed repository result: `{ profiles: CocktailProfile[]; imageUrlsByCocktailId: Record<string, string | null> }`. The caller passes the **already eligible** profiles into `buildRecommendationResult`. Eligibility rules and max results are deferred to P3-03 and must not be silently implemented in the repository now. Define a clear policy for `is_active` before treating it as a candidate filter.
+Repository result: `{ cocktails: CocktailProfile[]; imageUrlsByCocktailId: Partial<Record<CocktailId, string | null>> }`, matching the P3-01 `CocktailReader` port. The caller passes **all eligible** profiles into `buildRecommendationResult`. The reader filters `is_active = true` but must not apply a five-row limit. Only reviewed/approved records may be activated via the dataset workflow; `is_active` is an availability flag, not a stored review-status field. The application service takes up to five recommendations only **after** Domain has ranked the complete eligible set. Domain presentation order must not be misrepresented as absolute semantic superiority among incomparable candidates.
 
 ## 6. Migrations and seed strategy DB-005
 
 - TypeORM migrations are reviewed, committed and run explicitly; `synchronize: false` in all shared/production environments.
-- Initial migration creates `cocktails` with PK, nullability, defaults, range checks, and appropriate array integrity enforcement.
+- Initial migration creates `cocktails` with PK, nullability, `is_active DEFAULT false`, range checks, and appropriate array integrity enforcement.
 - Import/seed is idempotent by stable cocktail ID, detects duplicates and rejects invalid records rather than coercing them.
 - Changes to canonical vocabularies require coordinated Domain changes, DB migration/validation, and golden/integration tests.
 - No index beyond PK is required by this design alone. Add indexes only after actual candidate queries are defined and measured.
@@ -101,20 +101,20 @@ Proposed repository result: `{ profiles: CocktailProfile[]; imageUrlsByCocktailI
 
 1. Migration test: create schema on disposable PostgreSQL and verify constraints.
 2. Mapper unit tests: valid row; each invalid core score; unknown/duplicate flavors and spirits; null/malformed identity; missing image.
-3. Repository integration tests: load active/inactive fixtures, duplicate ID prevention, stable mapping and query behavior once eligibility is defined.
+3. Repository integration tests: retrieve only active/approved fixtures, exclude inactive rows, prevent duplicate IDs, and verify stable mapping without pre-ranking SQL `LIMIT 5`.
 4. API integration: valid eight-answer submission, malformed input `400`, DB/row failures as server errors, deterministic recommendation response.
 5. Quality gate: existing 102 tests and Domain architecture constraints remain passing; add tests without rewriting ranking logic.
 
 ## 9. Deferred decisions / review questions
 
-- **P3-03:** catalog source and stable ID namespace, candidate eligibility (including `is_active`), minimum dataset quality, number of recommendations, seed fixtures and images.
+- **P3-03 production data:** catalog source and stable ID namespace, independently approved taste scores, seed fixtures and image rights. Candidate eligibility (`is_active = true` after review) and five-result post-ranking limit are accepted.
 - **P3-02 implementation:** exact TypeORM column decorators and safe array-integrity SQL function/migration approach.
 - Future: ingredients, localized names, external source IDs, admin edits, historical versioning, richer relations.
 
 ## 10. Acceptance checklist
 
-- [ ] Agree on single-table model and ID policy.
-- [ ] Confirm score/array constraints and canonical vocabulary strategy.
-- [ ] Confirm entity-to-domain validation and repository boundary.
-- [ ] Confirm migrations, seeds and tests.
-- [ ] Mark this document `Accepted v1` after review; then implement P3-02 schema/migrations in a separate code step or proceed according to the Phase 3 plan.
+- [x] Agree on single-table model and stable source-independent string ID policy; specific production IDs remain to be assigned.
+- [x] Confirm score/array constraints and canonical vocabulary strategy.
+- [x] Confirm entity-to-domain validation and repository boundary.
+- [x] Confirm migrations, seeds and tests.
+- [x] Mark this document `Accepted v1`; schema/migrations remain a separate implementation step.

@@ -1,7 +1,7 @@
-Status: Proposed
-Version: v1-draft
+Status: Accepted
+Version: v1
 Phase: 3 / P3-01
-Last Updated: 2026-10-14
+Last Updated: 2026-10-15
 
 # Backend Architecture — P3-01
 
@@ -9,7 +9,7 @@ Last Updated: 2026-10-14
 
 The MVP exposes one synchronous recommendation use case through `POST /recommendations`. The backend accepts a complete eight-question Assessment, transforms it into a `UserTasteProfile`, obtains eligible cocktail candidates, and returns the existing `RecommendationResult` v1. Assessment responses are not persisted.
 
-This document establishes architectural boundaries, not database schema, candidate eligibility, result count, or deployment topology. Those decisions belong to subsequent Phase 3 tasks.
+This document establishes architectural boundaries. P3-02 defines the database schema and P3-03 defines dataset approval. The agreed MVP policy is to consider only active, reviewed catalog records and return at most five recommendations after full Domain ranking. Deployment topology remains deferred.
 
 ## 2. Existing implementation baseline
 
@@ -31,6 +31,8 @@ This document establishes architectural boundaries, not database schema, candida
 | BA-006 | The response preserves `RecommendationResult` v1, including presentation ranks and positive reasons, without exposing internal ranking metadata. |
 | BA-007 | Identical assessment and identical eligible candidate snapshot produce the same recommendation result regardless of database row order. |
 | BA-008 | Assessment submissions are not stored in MVP. |
+| BA-009 | Only approved catalog entries with `is_active = true` are eligible. Approval is managed in seed/provenance review, not inferred from an `is_active` flag alone. |
+| BA-010 | Evaluate and rank all eligible candidates through Domain, then return the first five presentation-ordered recommendations. Never apply SQL `LIMIT 5` before ranking. |
 
 ## 4. Dependency direction
 
@@ -104,10 +106,11 @@ The HTTP transport type can be declared in `packages/contracts` using a type-onl
 
 1. `RecommendationController` receives JSON and extracts `answers`.
 2. `RecommendationService` calls `transformAssessmentAnswers(answers)`; the function performs canonical runtime validation. Translate `AssessmentValidationError` to HTTP 400 at the API boundary.
-3. `RecommendationService` requests eligible candidate records from `CocktailReader`. Eligibility and recommendation count remain pending dataset policy; the repository must not silently invent domain ranking rules.
+3. `RecommendationService` requests eligible candidate records from `CocktailReader`. Eligibility is restricted to active catalog rows that have passed the dataset approval workflow; the repository must not invent domain ranking rules.
 4. The infrastructure adapter maps persisted rows to `CocktailProfile`, validates all required canonical values and five core dimensions, rejects duplicate IDs, and supplies image URLs separately when available.
 5. `RecommendationService` calls `buildRecommendationResult(profile, eligibleCocktails, { imageUrlsByCocktailId })`. This function already handles matching, ranking, and reason generation; do not reimplement those algorithms in NestJS.
-6. Controller returns the result as JSON, preserving one-based presentation ranks.
+6. Application service takes the first five entries of the fully ranked `recommendations` array; fewer than five candidates produce fewer results, and no candidates produce an empty array. Preserve original one-based presentation ranks. These ranks represent deterministic display order, not absolute semantic superiority among incomparable candidates.
+7. Controller returns the resulting `RecommendationResult` as JSON.
 
 The operation is read-only; no transaction is required solely to persist an Assessment, because none is stored. If candidate data consistency across multiple reads becomes relevant, choose a read-consistency strategy in the database design.
 
@@ -124,18 +127,19 @@ interface CocktailReader {
 }
 ```
 
-The eligibility criterion is deliberately unspecified. Avoid coupling the service to TypeORM-specific `Repository<Entity>` or leaking database entities outside the adapter. Ensure image metadata does not influence recommendation semantics.
+The adapter queries `is_active = true` rows; only reviewed/approved catalog entries may be activated by the dataset workflow. The port returns all eligible profiles (not a DB-limited top five). Avoid coupling the service to TypeORM-specific `Repository<Entity>` or leaking database entities outside the adapter. Ensure image metadata does not influence recommendation semantics.
 
 ## 9. Validation and error ownership
 
 - API boundary: validate top-level request envelope and translate exceptions into stable HTTP errors.
 - Domain: validate all eight Assessment answers, unique IDs, canonical selections, cardinality, preferred/avoided conflict, and unknown core dimensions.
 - Persistence adapter: validate stored cocktail data at runtime before constructing Domain profiles; do not fill missing core scores with defaults.
-- Application service: orchestration only; no duplicate ranking formulas or hidden candidate truncation.
+- Application service: orchestration and explicit post-ranking presentation limit of five; no duplicate ranking formulas or pre-ranking truncation.
 
 ## 10. Testing and quality gates
 
 - Controller: valid request -> 200; malformed envelope/domain validation error -> 400; infrastructure failure -> sanitized server error.
+- Presentation limit: 0, 1–4, 5, and more than 5 eligible candidates; verify limiting happens only after full ranking and display order is stable.
 - Service: mock `CocktailReader`; verify Domain composition, zero-candidate response, duplicate ID handling, and independence from database row order.
 - Mapper: invalid/missing core dimensions, unknown vocabulary, duplicate IDs, and null image handling.
 - Integration: API + PostgreSQL fixture dataset (after P3-02/03), with deterministic expected result.
@@ -145,7 +149,7 @@ The eligibility criterion is deliberately unspecified. Avoid coupling the servic
 ## 11. Deferred decisions
 
 1. P3-02: PostgreSQL schema, TypeORM entities, migrations, connection configuration, and persistence validation strategy.
-2. P3-03: actual dataset, eligibility rules, recommendation count, and image source.
+2. P3-03: actual independently reviewed production profiles, recipe variants, and image source. Eligibility and five-result policy are accepted in this design.
 3. P3-04/05: implementation of request contracts, controller, service, adapters, and runtime exception mapping.
 4. P3-06/07: DB-backed integration tests, architecture enforcement extensions, and CI verification.
 5. Authentication, persistence of answers, analytics, sharing, and rate limiting are not part of this initial MVP architecture decision.
@@ -157,4 +161,5 @@ The eligibility criterion is deliberately unspecified. Avoid coupling the servic
 - [x] Dependency direction and framework independence documented.
 - [x] Domain `Assessment` and `RecommendationResult` v1 contracts preserved.
 - [x] Error boundaries and test plan documented.
-- [ ] Review and accept this document as `Status: Accepted` / `Version: v1`.
+- [x] Review and accept this document as `Status: Accepted` / `Version: v1`.
+- [x] Confirm active/approved candidate eligibility and post-ranking five-result limit.
