@@ -56,3 +56,70 @@ Flavor는 존재 여부만 표현하며, BaseSpirit는 실제 베이스 증류�
 - 모든 값이 Domain의 표준 어휘 및 범위를 만족한다.
 - 점수 간 일관성과 차별성이 검토된다.
 - 승인되지 않은 프로필은 운영 추천 후보로 노출되지 않는다.
+
+## 7. Recipe-Based Profile Review — Batch 1
+
+Status: Under Review
+
+### Mojito
+
+- Source: https://iba-world.com/iba-cocktail/mojito/
+- Ingredients: White Cuban rum, lime juice, mint, sugar, soda water
+- Proposed scores: sweet 3, sour 4, bitter 1, alcoholIntensity 2, refreshing 5
+- Flavor: citrus, herbal
+- BaseSpirit: rum
+- Rationale: 라임의 산미와 민트의 허브 향, 소다의 청량감이 특징이다. 설탕이 들어가므로 단맛은 중간으로 평가한다.
+- Review status: Provisional
+
+### Margarita
+
+- Source: https://iba-world.com/iba-cocktail/margarita/
+- Ingredients: Tequila, triple sec, lime juice
+- Proposed scores: sweet 2, sour 5, bitter 1, alcoholIntensity 4, refreshing 4
+- Flavor: citrus
+- BaseSpirit: tequila
+- Rationale: 라임 중심의 산미가 강하며, 증류주와 오렌지 리큐어가 알코올감을 형성한다. 트리플 섹의 단맛을 고려해 sweet 2를 임시 부여한다.
+- Review status: Provisional
+
+### Negroni
+
+- Source: https://iba-world.com/iba-cocktail/negroni/
+- Ingredients: Gin, Campari, sweet red vermouth
+- Proposed scores: sweet 3, sour 1, bitter 5, alcoholIntensity 4, refreshing 2
+- Flavor: citrus, herbal
+- BaseSpirit: gin
+- Rationale: 캄파리의 강한 쓴맛과 스위트 베르무트의 단맛이 함께 존재한다. 과즙을 사용하지 않으므로 산미는 낮게 평가한다.
+- Review status: Provisional
+
+### Dry Martini
+
+- Source: https://iba-world.com/iba-cocktail/dry-martini/
+- Ingredients: Gin, dry vermouth
+- Proposed scores: sweet 1, sour 1, bitter 2, alcoholIntensity 5, refreshing 1
+- Flavor: herbal
+- BaseSpirit: gin
+- Rationale: 단맛이 낮고 증류주 비중이 높다. 진과 베르무트의 보태니컬 특성을 herbal로 분류한다.
+- Review status: Provisional
+
+### Americano
+
+- Source: https://iba-world.com/iba-cocktail/americano/
+- Ingredients: Campari, sweet red vermouth, soda water
+- Proposed scores: sweet 3, sour 1, bitter 4, alcoholIntensity 2, refreshing 4
+- Flavor: citrus, herbal (review required)
+- BaseSpirit: []
+- Rationale: 캄파리의 쓴맛과 베르무트의 단맛, 소다의 청량감이 특징이다. 현재 표준 BaseSpirit 목록에 해당하는 베이스 증류주가 없다.
+- Review status: Provisional
+- Open question: citrus가 실제 음료의 주된 맛인지, 오렌지 가니시만을 반영한 것인지 재검토한다.
+
+## 8. Remaining Review
+
+- [ ] Tom Collins
+- [ ] Mezcal Margarita
+- [ ] Piña Colada
+- [ ] Tequila Sunrise
+- [ ] Espresso Martini
+- [ ] Old Fashioned
+- [ ] Manhattan
+
+모든 프로필은 승인 전까지 Draft 상태를 유지한다. 이 문서의 점수는 레시피 기반 추정이며 공식 IBA 평가 점수가 아니다.
