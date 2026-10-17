@@ -112,14 +112,98 @@ Status: Under Review
 - Review status: Provisional
 - Open question: citrus가 실제 음료의 주된 맛인지, 오렌지 가니시만을 반영한 것인지 재검토한다.
 
-## 8. Remaining Review
+## 8. Recipe-Based Profile Review — Batch 2
 
-- [ ] Tom Collins
-- [ ] Mezcal Margarita
-- [ ] Piña Colada
-- [ ] Tequila Sunrise
-- [ ] Espresso Martini
-- [ ] Old Fashioned
-- [ ] Manhattan
+Status: Under Review
+
+### Tom Collins
+
+- Source: https://iba-world.com/iba-cocktail/john-collins/
+- Recipe variant: Old Tom Gin을 사용하는 Tom Collins
+- Ingredients: Old Tom Gin, fresh lemon juice, simple syrup, soda water
+- Proposed scores: sweet 3, sour 4, bitter 1, alcoholIntensity 2, refreshing 5
+- Flavor: citrus
+- BaseSpirit: gin
+- Rationale: 레몬의 산미, 설탕 시럽의 단맛, 소다의 청량감이 중심이다.
+- Review status: Provisional
+- Open question: Old Tom Gin의 단맛과 브랜드별 특성에 따라 sweet 점수를 재검토한다.
+
+### Mezcal Margarita
+
+- Source: https://vinepair.com/cocktail-recipe/mezcal-margarita-recipe/
+- Ingredients: Mezcal, orange liqueur, lime juice, agave nectar
+- Proposed scores: sweet 3, sour 5, bitter 1, alcoholIntensity 4, refreshing 4
+- Flavor: citrus, smoky
+- BaseSpirit: mezcal
+- Rationale: 라임의 강한 산미, 아가베와 리큐어의 단맛, 메스칼의 스모키한 특성이 조합된다.
+- Review status: Provisional
+- Open question: 사용 메스칼의 스모키함과 아가베 비율에 따라 점수가 달라질 수 있다.
+
+### Piña Colada
+
+- Source: https://iba-world.com/iba-cocktail/pina-colada/
+- Ingredients: White rum, coconut cream, fresh pineapple juice
+- Proposed scores: sweet 5, sour 1, bitter 1, alcoholIntensity 2, refreshing 3
+- Flavor: tropical, fruity, creamy
+- BaseSpirit: rum
+- Rationale: 코코넛 크림과 파인애플이 풍부한 단맛과 크리미한 질감을 만든다.
+- Review status: Provisional
+
+### Tequila Sunrise
+
+- Source: https://iba-world.com/iba-cocktail/tequila-sunrise/
+- Ingredients: Tequila, fresh orange juice, grenadine syrup
+- Proposed scores: sweet 4, sour 2, bitter 1, alcoholIntensity 2, refreshing 3
+- Flavor: citrus, fruity
+- BaseSpirit: tequila
+- Rationale: 오렌지 주스와 그레나딘이 과일향과 단맛을 형성한다.
+- Review status: Provisional
+
+### Espresso Martini
+
+- Source: https://iba-world.com/iba-cocktail/espresso-martini/
+- Ingredients: Vodka, coffee liqueur, espresso, sugar syrup
+- Proposed scores: sweet 3, sour 1, bitter 3, alcoholIntensity 4, refreshing 1
+- Flavor: coffee
+- BaseSpirit: vodka
+- Rationale: 커피의 쓴맛과 리큐어 및 시럽의 단맛이 함께 존재한다.
+- Review status: Provisional
+
+### Old Fashioned
+
+- Source: https://iba-world.com/iba-cocktail/old-fashioned/
+- Ingredients: Bourbon or rye whiskey, sugar cube, Angostura bitters, water
+- Proposed scores: sweet 2, sour 1, bitter 3, alcoholIntensity 5, refreshing 1
+- Flavor: [] (review required)
+- BaseSpirit: whiskey
+- Rationale: 위스키의 체감 강도가 높고 설탕과 비터스가 보조적인 맛을 형성한다.
+- Review status: Provisional
+- Open question: 오렌지 가니시만을 근거로 citrus를 부여하지 않는다. 비터스의 향이 herbal에 해당하는지 검토한다.
+
+### Manhattan
+
+- Source: https://iba-world.com/iba-cocktail/manhattan/
+- Ingredients: Rye whiskey, sweet red vermouth, Angostura bitters
+- Proposed scores: sweet 3, sour 1, bitter 3, alcoholIntensity 5, refreshing 1
+- Flavor: herbal (review required)
+- BaseSpirit: whiskey
+- Rationale: 위스키의 높은 알코올감과 스위트 베르무트의 단맛, 비터스의 쓴맛이 조합된다.
+- Review status: Provisional
+- Open question: 베르무트와 비터스의 향이 herbal로 충분히 인지되는지 검토한다.
+
+## 9. Cross-Profile Review — Pending
+
+12개 칵테일의 개별 레시피 검토를 완료했지만, 모든 점수는 아직 잠정 값이다.
+
+다음 항목을 검토한 후 승인 여부를 결정한다.
+
+- [ ] 12개 프로필의 고유 ID와 이름 확정
+- [ ] Sweet/Sour/Bitter/Alcohol/Refreshing 점수의 상대적 일관성
+- [ ] 가니시만을 근거로 부여한 Flavor 제거
+- [ ] 비슷한 칵테일 간 차별성과 추천 결과 검토
+- [ ] 레시피 출처 및 프로필 근거 최종 확인
+- [ ] Accepted v1 승인
+
+승인 전까지 Seed 데이터는 비활성 상태를 유지한다.
 
 모든 프로필은 승인 전까지 Draft 상태를 유지한다. 이 문서의 점수는 레시피 기반 추정이며 공식 IBA 평가 점수가 아니다.
