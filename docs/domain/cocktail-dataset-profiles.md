@@ -1,8 +1,9 @@
-# Cocktail Dataset Profiles — Draft v1
+# Cocktail Dataset Profiles — v1
 
-Status: Draft  
-Phase: 3 / P3-05-02  
-Date: 2026-10-16
+Status: Accepted
+Version: v1
+Phase: 3 / P3-05-02
+Last Updated: 2026-10-19
 
 ## 1. Purpose
 
@@ -294,3 +295,69 @@ Phase: P3-05-02-05
 - [ ] Dataset status updated to Accepted v1.
 
 Until final approval, the dataset remains Draft and all Seed records remain inactive.
+
+## 11. Dataset v1 Final Decision
+
+Status: Accepted v1
+
+### 11.1 Scope
+
+The MVP dataset consists of 12 cocktails with stable kebab-case IDs.
+
+The five core taste scores are accepted as editorial MVP estimates. They are not official IBA ratings or scientifically validated sensory measurements.
+
+### 11.2 Canonical Profile Values
+
+Score order: sweet / sour / bitter / alcoholIntensity / refreshing.
+
+| ID               | Scores    | Flavors                  | BaseSpirits |
+| ---------------- | --------- | ------------------------ | ----------- |
+| mojito           | 3/4/1/2/5 | citrus, herbal           | rum         |
+| tom-collins      | 3/4/1/2/5 | citrus                   | gin         |
+| negroni          | 3/1/5/4/2 | herbal                   | gin         |
+| margarita        | 2/5/1/4/4 | citrus                   | tequila     |
+| mezcal-margarita | 3/5/1/4/4 | citrus, smoky            | mezcal      |
+| pina-colada      | 5/1/1/2/3 | tropical, fruity, creamy | rum         |
+| tequila-sunrise  | 4/2/1/2/3 | citrus, fruity           | tequila     |
+| espresso-martini | 3/1/3/4/1 | coffee                   | vodka       |
+| old-fashioned    | 2/1/3/5/1 | []                       | whiskey     |
+| manhattan        | 3/1/3/5/1 | herbal                   | whiskey     |
+| dry-martini      | 1/1/2/5/1 | herbal                   | gin         |
+| americano        | 3/1/4/2/4 | herbal                   | []          |
+
+### 11.3 Supersession Rule
+
+The canonical values in Section 11.2 supersede provisional Flavor classifications recorded in Sections 7 and 8.
+
+Sections 7 and 8 are retained as recipe review history. Their provisional labels do not override the accepted dataset.
+
+### 11.4 Recommendation Policy
+
+- Preserve the existing core-first ranking algorithm.
+- Preserve deterministic tie handling.
+- Keep the six representative recommendation scenarios as regression tests.
+- Do not alter core scores solely to force unique rankings.
+- Future user feedback may inform a subsequent dataset version.
+
+### 11.5 Activation Policy
+
+Dataset approval does not authorize automatic production activation.
+
+- All initial Seed records must have `isActive: false`.
+- Image URLs remain null until usage rights are verified.
+- Database activation requires a separate explicit step.
+- Re-running the Seed command must not unintentionally deactivate existing active records.
+
+### 11.6 Acceptance
+
+- [x] Twelve canonical profiles defined.
+- [x] Recipe references documented.
+- [x] Stable IDs defined.
+- [x] Flavor ambiguities resolved for MVP.
+- [x] Core score consistency reviewed.
+- [x] Six representative recommendation scenarios reviewed.
+- [x] Dataset v1 values selected for MVP.
+
+**Decision:** Accept the 12 cocktail profiles as Dataset v1 for MVP development, subject to the final regression and quality-gate run.
+
+The accepted values are suitable for initial product testing but do not constitute sensory validation.
