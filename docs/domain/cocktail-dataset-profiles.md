@@ -240,3 +240,57 @@ Status: Pending Approval
 - [ ] Dataset approved as Accepted v1.
 
 Do not activate records while this gate remains incomplete.
+
+## 10. Recommendation Simulation Review
+
+Status: Reviewed  
+Phase: P3-05-02-05
+
+### Test Environment
+
+- Candidate dataset: 12 provisional cocktail profiles
+- Ranking implementation: Existing Domain recommendation functions
+- Scenarios: 6 representative user profiles
+- Simulation tests: 8 passed
+- Full quality gate: 153 tests passed; lint, typecheck, architecture checks, and build passed
+
+### Observed Top Recommendations
+
+| Scenario         | Rank 1           | Rank 2           |
+| ---------------- | ---------------- | ---------------- |
+| Refreshing + Rum | Mojito           | Tom Collins      |
+| Refreshing + Gin | Tom Collins      | Mojito           |
+| Smoky Margarita  | Mezcal Margarita | Margarita        |
+| Bitter + Herbal  | Negroni          | Espresso Martini |
+| Sweet + Creamy   | Piña Colada      | Tequila Sunrise  |
+| Strong Whiskey   | Old Fashioned    | Manhattan        |
+
+### Findings
+
+1. BaseSpirit preference distinguishes Mojito and Tom Collins despite identical core scores.
+2. Smoky Flavor and Mezcal preference are reflected in the Mezcal Margarita scenario.
+3. Piña Colada ranks first for the sweet and creamy scenario.
+4. Old Fashioned ranks first for the strong whiskey scenario.
+5. Negroni ranks first for the bitter and herbal scenario.
+6. Espresso Martini ranks above Americano in the bitter and herbal scenario. This is consistent with the current core-first ranking policy but warrants future user validation.
+7. Reversing candidate input order does not change the recommendation ordering in the tested scenarios.
+
+### Decision
+
+- No recommendation algorithm changes are required based on the current simulation.
+- Preserve the existing core-first ranking policy.
+- Add regression assertions for the six observed first-place recommendations.
+- Treat the profiles as MVP editorial estimates rather than sensory-validated measurements.
+- Keep database activation separate from dataset approval.
+
+### Remaining Approval Actions
+
+- [x] Recipe-based draft profiles completed.
+- [x] Cross-profile comparison completed.
+- [x] Six recommendation scenarios reviewed.
+- [x] Deterministic ordering verified for the tested scenarios.
+- [ ] Regression assertions pass.
+- [ ] Final scores and Flavor classifications explicitly approved.
+- [ ] Dataset status updated to Accepted v1.
+
+Until final approval, the dataset remains Draft and all Seed records remain inactive.
