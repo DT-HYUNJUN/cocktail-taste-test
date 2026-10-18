@@ -191,19 +191,52 @@ Status: Under Review
 - Review status: Provisional
 - Open question: 베르무트와 비터스의 향이 herbal로 충분히 인지되는지 검토한다.
 
-## 9. Cross-Profile Review — Pending
+## 9. Cross-Profile Review — Proposed Decisions
 
-12개 칵테일의 개별 레시피 검토를 완료했지만, 모든 점수는 아직 잠정 값이다.
+Status: Pending Approval
 
-다음 항목을 검토한 후 승인 여부를 결정한다.
+### 9.1 Identity Policy
 
-- [ ] 12개 프로필의 고유 ID와 이름 확정
-- [ ] Sweet/Sour/Bitter/Alcohol/Refreshing 점수의 상대적 일관성
-- [ ] 가니시만을 근거로 부여한 Flavor 제거
-- [ ] 비슷한 칵테일 간 차별성과 추천 결과 검토
-- [ ] 레시피 출처 및 프로필 근거 최종 확인
-- [ ] Accepted v1 승인
+- Stable ID format: lowercase kebab-case
+- IDs: mojito, tom-collins, negroni, margarita, mezcal-margarita, pina-colada, tequila-sunrise, espresso-martini, old-fashioned, manhattan, dry-martini, americano
+- Display name changes do not change IDs.
+- External API IDs are not used as primary keys.
 
-승인 전까지 Seed 데이터는 비활성 상태를 유지한다.
+### 9.2 Core Score Consistency
 
-모든 프로필은 승인 전까지 Draft 상태를 유지한다. 이 문서의 점수는 레시피 기반 추정이며 공식 IBA 평가 점수가 아니다.
+- Mojito and Tom Collins have identical core scores. BaseSpirit and Flavor distinguish them.
+- Margarita and Mezcal Margarita differ in sweetness, BaseSpirit, and smoky Flavor.
+- Old Fashioned and Manhattan differ in sweetness and potentially herbal Flavor.
+- No artificial score differences are introduced solely to force unique profiles.
+- Core scores remain provisional until the recommendation behavior is checked.
+
+### 9.3 Flavor Review Proposals
+
+- Americano: herbal; remove citrus unless supported by a fixed recipe and sensory rationale.
+- Negroni: herbal; remove citrus unless supported by a fixed recipe and sensory rationale.
+- Old Fashioned: empty Flavor set for MVP.
+- Manhattan: herbal.
+- Tom Collins: citrus.
+- Flavor classification is based on perceptible characteristics, not garnish alone.
+
+### 9.4 Data Quality and Limitations
+
+- All 12 profiles use the accepted canonical vocabulary.
+- All proposed core scores are within 1–5.
+- Recipe-based scores are editorial estimates, not official IBA ratings or validated sensory measurements.
+- Image URLs remain null pending usage-rights review.
+- All records remain inactive until explicit approval and activation.
+- Recommendation ranking and tie behavior must be verified using the real candidate set before activation.
+
+### 9.5 Acceptance Gate
+
+- [x] Draft profiles prepared for all 12 cocktails.
+- [x] Stable ID policy proposed.
+- [x] Cross-profile score comparison completed.
+- [x] Ambiguous Flavor classifications identified.
+- [ ] Final Flavor decisions approved.
+- [ ] Final scores approved for MVP.
+- [ ] Recommendation behavior tested against the proposed dataset.
+- [ ] Dataset approved as Accepted v1.
+
+Do not activate records while this gate remains incomplete.
