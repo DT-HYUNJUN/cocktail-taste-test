@@ -10,6 +10,7 @@ export async function seedCocktails(
 ): Promise<number> {
   const ids = new Set<string>();
 
+  // DB 연결 전에 전체 Seed를 검증한다.
   for (const seed of seeds) {
     if (ids.has(seed.id)) {
       throw new Error(`Duplicate seed ID: ${seed.id}`);
@@ -17,14 +18,12 @@ export async function seedCocktails(
 
     ids.add(seed.id);
 
-    // Mapper의 기존 런타임 검증 재사용
     mapCocktailEntity({
       ...seed,
       createdAt: new Date(),
       updatedAt: new Date(),
     } as CocktailEntity);
 
-    // 검토 완료 전에는 활성화 금지
     if (seed.isActive) {
       throw new Error(`Seed activation requires separate approval: ${seed.id}`);
     }
@@ -41,16 +40,20 @@ export async function seedCocktails(
       const repository = manager.getRepository(CocktailEntity);
 
       for (const seed of seeds) {
-        await repository.upsert(
-          {
+        await repository
+          .createQueryBuilder()
+          .insert()
+          .into(CocktailEntity)
+          .values({
             ...seed,
             isActive: false,
-          },
-          ['id'],
-        );
+          })
+          .orIgnore()
+          .execute();
       }
     });
 
+    // 입력 Seed 처리 건수이며 실제 신규 INSERT 건수는 아니다.
     return seeds.length;
   } finally {
     await AppDataSource.destroy();
@@ -59,7 +62,7 @@ export async function seedCocktails(
 
 async function main() {
   const count = await seedCocktails(cocktailSeeds);
-  console.log(`Seed completed: ${count} cocktails`);
+  console.log(`Seed processed: ${count} cocktails`);
 }
 
 if (process.argv[1]?.replaceAll('\\', '/').endsWith('/seed-cocktails.ts')) {

@@ -1,12 +1,26 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({
-  initialize: vi.fn(),
-  destroy: vi.fn(),
-  transaction: vi.fn(),
-  getRepository: vi.fn(),
-  upsert: vi.fn(),
-}));
+const mocks = vi.hoisted(() => {
+  const execute = vi.fn();
+
+  const queryBuilder = {
+    insert: vi.fn(),
+    into: vi.fn(),
+    values: vi.fn(),
+    orIgnore: vi.fn(),
+    execute,
+  };
+
+  return {
+    initialize: vi.fn(),
+    destroy: vi.fn(),
+    transaction: vi.fn(),
+    getRepository: vi.fn(),
+    createQueryBuilder: vi.fn(),
+    queryBuilder,
+    execute,
+  };
+});
 
 vi.mock('../data-source', () => ({
   AppDataSource: {
@@ -16,6 +30,7 @@ vi.mock('../data-source', () => ({
   },
 }));
 
+import { CocktailEntity } from '../../cocktails/entities/cocktail.entity';
 import { seedCocktails } from './seed-cocktails';
 import type { CocktailSeed } from './cocktail-seed.types';
 
@@ -42,10 +57,19 @@ describe('seedCocktails', () => {
 
     mocks.initialize.mockResolvedValue(undefined);
     mocks.destroy.mockResolvedValue(undefined);
-    mocks.upsert.mockResolvedValue(undefined);
+    mocks.execute.mockResolvedValue({ identifiers: [] });
+
+    const builder = mocks.queryBuilder;
+
+    builder.insert.mockReturnValue(builder);
+    builder.into.mockReturnValue(builder);
+    builder.values.mockReturnValue(builder);
+    builder.orIgnore.mockReturnValue(builder);
+
+    mocks.createQueryBuilder.mockReturnValue(builder);
 
     mocks.getRepository.mockReturnValue({
-      upsert: mocks.upsert,
+      createQueryBuilder: mocks.createQueryBuilder,
     });
 
     mocks.transaction.mockImplementation(
@@ -64,10 +88,10 @@ describe('seedCocktails', () => {
     await expect(seedCocktails([])).resolves.toBe(0);
 
     expect(mocks.initialize).not.toHaveBeenCalled();
-    expect(mocks.upsert).not.toHaveBeenCalled();
+    expect(mocks.execute).not.toHaveBeenCalled();
   });
 
-  it('정상 데이터를 저장한다', async () => {
+  it('새로운 Seed를 비활성 상태로 INSERT한다', async () => {
     const seed = createSeed();
 
     await expect(seedCocktails([seed])).resolves.toBe(1);
@@ -75,30 +99,45 @@ describe('seedCocktails', () => {
     expect(mocks.initialize).toHaveBeenCalledOnce();
     expect(mocks.transaction).toHaveBeenCalledOnce();
 
-    expect(mocks.upsert).toHaveBeenCalledWith(
-      {
-        ...seed,
-        isActive: false,
-      },
-      ['id'],
-    );
+    expect(mocks.queryBuilder.insert).toHaveBeenCalledOnce();
+    expect(mocks.queryBuilder.into).toHaveBeenCalledWith(CocktailEntity);
+    expect(mocks.queryBuilder.values).toHaveBeenCalledWith({
+      ...seed,
+      isActive: false,
+    });
 
+    expect(mocks.queryBuilder.orIgnore).toHaveBeenCalledOnce();
+    expect(mocks.execute).toHaveBeenCalledOnce();
     expect(mocks.destroy).toHaveBeenCalledOnce();
   });
 
-  it('여러 데이터를 저장한다', async () => {
+  it('여러 Seed를 처리한다', async () => {
     const seeds = [
-      createSeed({ id: 'mojito' }),
-      createSeed({ id: 'negroni', name: 'Negroni' }),
+      createSeed(),
+      createSeed({
+        id: 'negroni',
+        name: 'Negroni',
+      }),
     ];
 
     await expect(seedCocktails(seeds)).resolves.toBe(2);
 
-    expect(mocks.upsert).toHaveBeenCalledTimes(2);
+    expect(mocks.execute).toHaveBeenCalledTimes(2);
+    expect(mocks.queryBuilder.orIgnore).toHaveBeenCalledTimes(2);
   });
 
-  it('중복 ID를 거부한다', async () => {
-    const seeds = [createSeed(), createSeed({ name: 'Another Mojito' })];
+  it('충돌을 무시하는 INSERT 정책을 사용한다', async () => {
+    await seedCocktails([createSeed()]);
+
+    // ON CONFLICT DO NOTHING을 생성하는 TypeORM 메서드.
+    expect(mocks.queryBuilder.orIgnore).toHaveBeenCalledOnce();
+
+    // UPDATE나 UPSERT를 호출하는 경로는 사용하지 않는다.
+    expect(mocks.queryBuilder.insert).toHaveBeenCalledOnce();
+  });
+
+  it('중복 ID를 DB 연결 전에 거부한다', async () => {
+    const seeds = [createSeed(), createSeed({ name: 'Duplicate Mojito' })];
 
     await expect(seedCocktails(seeds)).rejects.toThrow(
       'Duplicate seed ID: mojito',
@@ -127,22 +166,20 @@ describe('seedCocktails', () => {
     await expect(seedCocktails([seed])).rejects.toThrow(
       'Invalid cocktail row field: flavors',
     );
+
+    expect(mocks.initialize).not.toHaveBeenCalled();
   });
 
-  it('승인되지 않은 활성화 요청을 거부한다', async () => {
-    const seed = createSeed({
-      isActive: true,
-    });
-
-    await expect(seedCocktails([seed])).rejects.toThrow(
-      'Seed activation requires separate approval: mojito',
-    );
+  it('Seed를 통한 활성화 요청을 거부한다', async () => {
+    await expect(
+      seedCocktails([createSeed({ isActive: true })]),
+    ).rejects.toThrow('Seed activation requires separate approval: mojito');
 
     expect(mocks.initialize).not.toHaveBeenCalled();
   });
 
   it('DB 저장 실패 시 연결을 종료하고 오류를 전파한다', async () => {
-    mocks.upsert.mockRejectedValueOnce(new Error('Database write failed'));
+    mocks.execute.mockRejectedValueOnce(new Error('Database write failed'));
 
     await expect(seedCocktails([createSeed()])).rejects.toThrow(
       'Database write failed',
