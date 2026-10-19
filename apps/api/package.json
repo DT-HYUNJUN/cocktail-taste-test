@@ -19,7 +19,8 @@
     "db:migrate": "tsx src/database/migrate.ts run",
     "db:revert": "tsx src/database/migrate.ts revert",
     "db:show": "tsx src/database/migrate.ts show",
-    "db:seed": "tsx src/database/seeds/seed-cocktails.ts"
+    "db:seed": "tsx src/database/seeds/seed-cocktails.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {
     "@cocktail-taste-test/domain": "workspace:*",
