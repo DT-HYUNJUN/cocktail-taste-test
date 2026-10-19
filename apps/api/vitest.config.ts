@@ -7,6 +7,7 @@ export default defineConfig({
       '**/node_modules/**',
       '**/dist/**',
       '**/test/integration/recommendation.integration.spec.ts',
+      '**/test/e2e/**/*.e2e.spec.ts',
     ],
   },
 });

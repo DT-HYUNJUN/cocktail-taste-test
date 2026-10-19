@@ -4,6 +4,7 @@ import {
   Controller,
   HttpCode,
   HttpStatus,
+  Inject,
   Post,
 } from '@nestjs/common';
 import { AssessmentValidationError } from '@cocktail-taste-test/domain';
@@ -12,7 +13,10 @@ import { RecommendationService } from './recommendation.service';
 
 @Controller('recommendations')
 export class RecommendationController {
-  constructor(private readonly recommendationService: RecommendationService) {}
+  constructor(
+    @Inject(RecommendationService)
+    private readonly recommendationService: RecommendationService,
+  ) {}
 
   @Post()
   @HttpCode(HttpStatus.OK)
