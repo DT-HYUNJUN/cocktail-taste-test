@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import { config } from 'dotenv';
 import { DataSource } from 'typeorm';
 import { CreateCocktails1792022400000 } from './migrations/1792022400000-CreateCocktails';
-import { CocktailEntity } from 'src/cocktails/entities/cocktail.entity';
+import { CocktailEntity } from '../cocktails/entities/cocktail.entity';
 
 config({ path: '.env' });
 
