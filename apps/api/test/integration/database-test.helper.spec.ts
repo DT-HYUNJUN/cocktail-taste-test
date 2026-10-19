@@ -101,4 +101,16 @@ describe('Integration Database Helper', () => {
 
     expect(destroy).toHaveBeenCalledOnce();
   });
+
+  it('원격 DB 연결을 거부한다', () => {
+    vi.stubEnv('TEST_DATABASE_HOST', 'production.example.com');
+
+    try {
+      expect(() => createTestDataSource()).toThrow(
+        'Integration tests require a local database host',
+      );
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
 });

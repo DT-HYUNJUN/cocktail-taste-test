@@ -1,4 +1,12 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from 'vitest';
 import type { DataSource } from 'typeorm';
 
 import { CocktailEntity } from '../../src/cocktails/entities/cocktail.entity';
@@ -57,6 +65,12 @@ describe('Recommendation Integration', () => {
 
   beforeEach(async () => {
     await clearTestCocktails(dataSource);
+  });
+
+  afterEach(async () => {
+    if (dataSource?.isInitialized) {
+      await clearTestCocktails(dataSource);
+    }
   });
 
   afterAll(async () => {
@@ -136,5 +150,17 @@ describe('Recommendation Integration', () => {
 
     expect(after.recommendations).toHaveLength(1);
     expect(after.recommendations[0].cocktail.id).toBe('mojito');
+  });
+
+  it('Migration을 재실행해도 기존 테이블을 유지한다', async () => {
+    await insertCocktails(['mojito']);
+
+    await dataSource.runMigrations({
+      transaction: 'all',
+    });
+
+    const count = await dataSource.getRepository(CocktailEntity).count();
+
+    expect(count).toBe(12);
   });
 });

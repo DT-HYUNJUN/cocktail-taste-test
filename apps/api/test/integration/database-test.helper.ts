@@ -8,6 +8,15 @@ const TEST_DATABASE_NAME = 'cocktail_taste_test';
 
 function getTestDatabaseConfig() {
   const host = process.env.TEST_DATABASE_HOST ?? '127.0.0.1';
+
+  const allowedHosts = ['127.0.0.1', 'localhost', '::1'];
+
+  if (!allowedHosts.includes(host)) {
+    throw new Error(
+      `Integration tests require a local database host, received: ${host}`,
+    );
+  }
+
   const port = Number(process.env.TEST_DATABASE_PORT ?? '5432');
   const username = process.env.TEST_DATABASE_USER ?? 'cocktail';
   const password =
