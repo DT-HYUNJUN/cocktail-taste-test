@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { config } from 'dotenv';
 import { DataSource } from 'typeorm';
 import { CreateCocktails1792022400000 } from './migrations/1792022400000-CreateCocktails';
+import { CocktailEntity } from 'src/cocktails/entities/cocktail.entity';
 
 config({ path: '.env' });
 
@@ -32,6 +33,7 @@ export const AppDataSource = new DataSource({
   username: process.env.DATABASE_USER,
   password: process.env.DATABASE_PASSWORD,
   database: process.env.DATABASE_NAME,
+  entities: [CocktailEntity],
   synchronize: false,
   migrationsTableName: 'typeorm_migrations',
   migrations: [CreateCocktails1792022400000],
