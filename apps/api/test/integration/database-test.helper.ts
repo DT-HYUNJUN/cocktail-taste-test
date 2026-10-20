@@ -6,7 +6,7 @@ import { CreateCocktails1792022400000 } from '../../src/database/migrations/1792
 
 const TEST_DATABASE_NAME = 'cocktail_taste_test';
 
-function getTestDatabaseConfig() {
+export function getTestDatabaseConfig() {
   const host = process.env.TEST_DATABASE_HOST ?? '127.0.0.1';
 
   const allowedHosts = ['127.0.0.1', 'localhost', '::1'];

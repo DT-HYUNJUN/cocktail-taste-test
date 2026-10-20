@@ -1,6 +1,15 @@
 import 'reflect-metadata';
 
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
 import { DataSource } from 'typeorm';
@@ -11,6 +20,7 @@ import {
   clearTestCocktails,
   createTestDataSource,
   destroyTestDatabase,
+  getTestDatabaseConfig,
   initializeTestDatabase,
 } from '../integration/database-test.helper';
 
@@ -47,11 +57,13 @@ describe('Recommendation HTTP E2E', () => {
 
   beforeAll(async () => {
     // AppModule이 읽는 환경변수를 테스트 DB로 고정
-    process.env.DATABASE_HOST = '127.0.0.1';
-    process.env.DATABASE_PORT = '5432';
-    process.env.DATABASE_USER = 'cocktail';
-    process.env.DATABASE_PASSWORD = 'cocktail_dev_password';
-    process.env.DATABASE_NAME = 'cocktail_taste_test';
+    const config = getTestDatabaseConfig();
+
+    vi.stubEnv('DATABASE_HOST', config.host);
+    vi.stubEnv('DATABASE_PORT', String(config.port));
+    vi.stubEnv('DATABASE_USER', config.username);
+    vi.stubEnv('DATABASE_PASSWORD', config.password);
+    vi.stubEnv('DATABASE_NAME', config.database);
 
     dataSource = createTestDataSource();
 
@@ -74,14 +86,28 @@ describe('Recommendation HTTP E2E', () => {
 
       baseUrl = `http://127.0.0.1:${address.port}`;
     } catch (error) {
-      await app?.close();
-      await destroyTestDatabase(dataSource);
+      try {
+        await app?.close();
+      } finally {
+        try {
+          await destroyTestDatabase(dataSource);
+        } finally {
+          vi.unstubAllEnvs();
+        }
+      }
+
       throw error;
     }
   });
 
   beforeEach(async () => {
     await clearTestCocktails(dataSource);
+  });
+
+  afterEach(async () => {
+    if (dataSource?.isInitialized) {
+      await clearTestCocktails(dataSource);
+    }
   });
 
   afterAll(async () => {
@@ -93,8 +119,12 @@ describe('Recommendation HTTP E2E', () => {
       try {
         await app?.close();
       } finally {
-        if (dataSource) {
-          await destroyTestDatabase(dataSource);
+        try {
+          if (dataSource) {
+            await destroyTestDatabase(dataSource);
+          }
+        } finally {
+          vi.unstubAllEnvs();
         }
       }
     }
@@ -140,5 +170,15 @@ describe('Recommendation HTTP E2E', () => {
     expect(response.status).toBe(200);
     expect(response.body.recommendations).toHaveLength(1);
     expect(response.body.recommendations[0].cocktail.id).toBe('mojito');
+  });
+
+  it('잘못된 Assessment 답변에 HTTP 400을 반환한다', async () => {
+    const response = await postRecommendation({
+      answers: [],
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body.statusCode).toBe(400);
+    expect(response.body.message).toBe('Invalid assessment answers');
   });
 });
