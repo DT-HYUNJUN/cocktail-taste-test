@@ -1,0 +1,32 @@
+### 정상적인 추천 요청
+POST http://localhost:3001/recommendations
+Content-Type: application/json
+
+{
+  "answers": [
+    { "questionId": "sweet", "answerId": "medium" },
+    { "questionId": "sour", "answerId": "high" },
+    { "questionId": "bitter", "answerId": "low" },
+    { "questionId": "alcohol-intensity", "answerId": "medium" },
+    { "questionId": "refreshing", "answerId": "very-high" },
+    { "questionId": "preferred-flavors", "answerIds": ["citrus"] },
+    { "questionId": "avoided-flavors", "answerIds": [] },
+    { "questionId": "preferred-base-spirits", "answerIds": ["gin"] }
+  ]
+}
+
+### 잘못된 요청 테스트 - 400 예상
+POST http://localhost:3001/recommendations
+Content-Type: application/json
+
+{
+  "answers": []
+}
+
+### 잘못된 요청 형식 테스트 - 400 예상
+POST http://localhost:3001/recommendations
+Content-Type: application/json
+
+{
+  "invalid": true
+}
