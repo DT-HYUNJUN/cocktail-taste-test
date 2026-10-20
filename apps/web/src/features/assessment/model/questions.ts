@@ -1,4 +1,5 @@
 export const SCALE_ANSWER_IDS = ["very-low", "low", "medium", "high", "very-high", "unknown"] as const;
+export type ScaleAnswerId = (typeof SCALE_ANSWER_IDS)[number];
 
 export const FLAVOR_OPTIONS = [
   { id: "citrus", label: "레몬·라임처럼 상큼한 시트러스" },
@@ -18,9 +19,12 @@ export const BASE_SPIRIT_OPTIONS = [
   { id: "whiskey", label: "whiskey" }, { id: "mezcal", label: "mezcal" },
 ] as const;
 
-type Option = { readonly id: string; readonly label: string };
-type SingleQuestion = { readonly kind: "single"; readonly id: "sweet" | "sour" | "bitter" | "alcohol-intensity" | "refreshing"; readonly title: string; readonly options: readonly Option[] };
-type MultiQuestion = { readonly kind: "multi"; readonly id: "preferred-flavors" | "avoided-flavors" | "preferred-base-spirits"; readonly title: string; readonly description: string; readonly maxSelections?: number; readonly options: readonly Option[] };
+export type CoreQuestionId = "sweet" | "sour" | "bitter" | "alcohol-intensity" | "refreshing";
+export type MultiQuestionId = "preferred-flavors" | "avoided-flavors" | "preferred-base-spirits";
+export type AssessmentQuestionId = CoreQuestionId | MultiQuestionId;
+export type Option = { readonly id: string; readonly label: string };
+export type SingleQuestion = { readonly kind: "single"; readonly id: CoreQuestionId; readonly title: string; readonly options: readonly Option[] };
+export type MultiQuestion = { readonly kind: "multi"; readonly id: MultiQuestionId; readonly title: string; readonly description: string; readonly maxSelections?: number; readonly options: readonly Option[] };
 export type AssessmentQuestion = SingleQuestion | MultiQuestion;
 
 const scale = (labels: readonly string[]): readonly Option[] => SCALE_ANSWER_IDS.map((id, index) => ({ id, label: labels[index] ?? "" }));
