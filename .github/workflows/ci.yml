@@ -1,16 +1,46 @@
 name: CI
+
 on: [pull_request]
+
 jobs:
   check:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: cocktail
+          POSTGRES_PASSWORD: cocktail_dev_password
+          POSTGRES_DB: cocktail_taste_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U cocktail -d cocktail_taste_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: pnpm/action-setup@v4
         with:
           version: 11.0.9
+
       - uses: actions/setup-node@v4
         with:
           node-version-file: .node-version
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm check
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Quality Gate
+        run: pnpm check
+
+      - name: Database integration tests
+        run: pnpm --filter api test:integration
+
+      - name: HTTP E2E tests
+        run: pnpm --filter api test:e2e
