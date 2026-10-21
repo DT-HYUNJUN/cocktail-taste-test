@@ -403,12 +403,26 @@ P4-01은 다음 조건을 만족할 때 완료된 것으로 판단한다.
 - 실패 및 빈 결과에 대한 사용자 경험이 정의되어 있다.
 - 구현 단계별 테스트 기준이 존재한다.
 
-## 14. Deferred Decisions
+## 14. P4-05 API 연결 결정
+
+브라우저는 동일 출처의 Next.js `POST /api/recommendations`를 호출하고, Route Handler가 NestJS `POST /recommendations`로 요청을 전달한다. 이 방식은 브라우저에 백엔드 주소를 노출하지 않으며 현재 NestJS에 별도 CORS 설정을 추가하지 않아도 된다.
+
+Route Handler는 서버 전용 `API_BASE_URL` 환경 변수를 사용한다. 로컬 개발에서는 NestJS를 `3001` 포트로 실행하고 Web을 기본 `3000` 포트로 실행한다.
+
+```powershell
+$env:PORT = "3001"
+corepack pnpm --filter api dev
+
+# 별도 터미널: apps/web/.env.local에 API_BASE_URL=http://localhost:3001 설정
+corepack pnpm --filter web dev
+```
+
+React Query는 요청의 pending/success/error 상태만 관리한다. 성공 응답은 P4-06 결과 화면이 직접 소비할 수 있는 `RecommendationResponse`로 전달하며 Zustand 또는 sessionStorage에 중복 저장하지 않는다.
+
+## 15. Deferred Decisions
 
 다음 항목은 별도 구현 단계에서 결정한다.
 
-- Browser 직접 호출 vs Next.js Route Handler
-- API Contract의 구체적인 패키지 구성 및 런타임 검증 방식
 - 공유 가능한 영구 결과 URL 및 서버 저장 방식
 - 칵테일 상세 페이지
 - 결과 공유 기능의 구체적인 구현
