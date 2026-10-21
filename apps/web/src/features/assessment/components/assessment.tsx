@@ -1,17 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useCreateRecommendation } from "../../recommendation/api/use-create-recommendation";
+import { clearRecommendationResult, saveRecommendationResult } from "../../recommendation/model/result-snapshot";
 import { serializeAssessmentAnswers } from "../model/answers";
 import { hydrateAssessmentStore, useAssessmentStore } from "../model/assessment-store";
 import { ASSESSMENT_QUESTIONS } from "../model/questions";
-import { AssessmentComplete } from "./assessment-complete";
 import { MultiChoiceQuestion } from "./multi-choice-question";
 import { QuestionHeader } from "./question-header";
 import { QuestionNavigation } from "./question-navigation";
 import { SingleChoiceQuestion } from "./single-choice-question";
 
 export function Assessment() {
+  const router = useRouter();
   const currentIndex = useAssessmentStore((state) => state.currentIndex);
   const answers = useAssessmentStore((state) => state.answers);
   const hasHydrated = useAssessmentStore((state) => state.hasHydrated);
@@ -45,7 +47,17 @@ export function Assessment() {
       setCompletionError("모든 질문에 유효한 답변이 필요합니다. 이전 질문의 답변을 확인해 주세요.");
       return;
     }
-    recommendation.mutate({ answers: serialized });
+    clearRecommendationResult();
+    recommendation.mutate({ answers: serialized }, {
+      onSuccess: (result) => {
+        if (saveRecommendationResult(result) === null) {
+          setCompletionError("추천 결과를 안전하게 저장하지 못했습니다. 다시 시도해 주세요.");
+          recommendation.reset();
+          return;
+        }
+        router.push("/result");
+      },
+    });
   };
 
   const continueAssessment = () => {
@@ -61,13 +73,8 @@ export function Assessment() {
     submitAssessment();
   };
 
-  const editAnswers = () => {
-    recommendation.reset();
-    returnToLastQuestion();
-  };
-
   if (recommendation.isSuccess) {
-    return <AssessmentComplete result={recommendation.data} onEdit={editAnswers} />;
+    return <section className="mx-auto flex min-h-screen w-full max-w-3xl items-center justify-center px-5" aria-busy="true" aria-live="polite">결과 화면으로 이동하는 중입니다.</section>;
   }
 
   const canContinue = question.kind === "multi" || typeof answer === "string";
@@ -92,7 +99,7 @@ export function Assessment() {
             <p className="text-sm font-medium text-red-800">{recommendation.error.message}</p>
             <div className="mt-3 flex flex-wrap gap-3">
               <button type="button" onClick={submitAssessment} className="rounded-lg bg-red-800 px-4 py-2 text-sm font-medium text-white">다시 시도</button>
-              <button type="button" onClick={editAnswers} className="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-900">답변 수정하기</button>
+              <button type="button" onClick={() => { recommendation.reset(); returnToLastQuestion(); }} className="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-900">답변 수정하기</button>
             </div>
           </div>
         )}

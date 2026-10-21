@@ -1,12 +1,17 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useAssessmentStore } from "../model/assessment-store";
+import { RECOMMENDATION_RESULT_STORAGE_KEY } from "../../recommendation/model/result-snapshot";
 import { Assessment } from "./assessment";
+
+const pushMock = vi.hoisted(() => vi.fn());
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: pushMock }) }));
 
 afterEach(cleanup);
 beforeEach(() => {
   sessionStorage.clear();
+  pushMock.mockClear();
   useAssessmentStore.setState({ currentIndex: 0, answers: {}, hasHydrated: false });
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
     profile: { dimensions: [], preferredFlavors: [], avoidedFlavors: [], preferredBaseSpirits: [] },
@@ -84,19 +89,17 @@ describe("Assessment", () => {
     expect(screen.getByRole("button", { name: "결과 확인하기" })).toBeEnabled();
     expect(screen.getByText("0/2개 선택됨")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "결과 확인하기" }));
-    expect(await screen.findByRole("heading", { name: "추천 결과를 받았어요" })).toBeVisible();
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/result"));
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
-  it("returns from completion to Q8 with the existing answer", async () => {
+  it("keeps the Q8 answer after successful submission", async () => {
     await renderAssessment();
     completeAssessment();
     fireEvent.click(screen.getByRole("checkbox", { name: "gin" }));
     fireEvent.click(screen.getByRole("button", { name: "결과 확인하기" }));
-    fireEvent.click(await screen.findByRole("button", { name: "답변 수정하기" }));
-
-    expect(await screen.findByLabelText("질문 8 / 8")).toBeVisible();
-    expect(screen.getByRole("checkbox", { name: "gin" })).toBeChecked();
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/result"));
+    expect(useAssessmentStore.getState().answers["preferred-base-spirits"]).toEqual(["gin"]);
   });
 
   it("shows pending state, prevents duplicate submission, and sends canonical answers", async () => {
@@ -104,15 +107,17 @@ describe("Assessment", () => {
     vi.mocked(fetch).mockImplementation(() => new Promise((resolve) => { resolveRequest = resolve; }));
     await renderAssessment();
     completeAssessment();
+    sessionStorage.setItem(RECOMMENDATION_RESULT_STORAGE_KEY, "old result");
     fireEvent.click(screen.getByRole("button", { name: "결과 확인하기" }));
     const pending = await screen.findByRole("button", { name: "추천을 준비하는 중..." });
     expect(pending).toBeDisabled();
     fireEvent.click(pending);
     expect(fetch).toHaveBeenCalledTimes(1);
+    expect(sessionStorage.getItem(RECOMMENDATION_RESULT_STORAGE_KEY)).toBeNull();
     const request = vi.mocked(fetch).mock.calls[0]?.[1];
     expect(JSON.parse(String(request?.body)).answers).toHaveLength(8);
     resolveRequest(new Response(JSON.stringify({ profile: { dimensions: [], preferredFlavors: [], avoidedFlavors: [], preferredBaseSpirits: [] }, recommendations: [] }), { status: 200 }));
-    expect(await screen.findByRole("heading", { name: "추천 결과를 받았어요" })).toBeVisible();
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/result"));
   });
 
   it("keeps answers after failure and retries with revised answers", async () => {
@@ -128,7 +133,7 @@ describe("Assessment", () => {
     fireEvent.click(screen.getByRole("checkbox", { name: "gin" }));
     fireEvent.click(screen.getByRole("checkbox", { name: "rum" }));
     fireEvent.click(screen.getByRole("button", { name: "결과 확인하기" }));
-    await screen.findByRole("heading", { name: "추천 결과를 받았어요" });
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/result"));
     expect(fetch).toHaveBeenCalledTimes(2);
     expect(String(vi.mocked(fetch).mock.calls[1]?.[1]?.body)).toContain('"answerIds":["rum"]');
   });
@@ -141,7 +146,7 @@ describe("Assessment", () => {
     completeAssessment();
     fireEvent.click(screen.getByRole("button", { name: "결과 확인하기" }));
     fireEvent.click(await screen.findByRole("button", { name: "다시 시도" }));
-    expect(await screen.findByRole("heading", { name: "추천 결과를 받았어요" })).toBeVisible();
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/result"));
     expect(vi.mocked(fetch).mock.calls[1]?.[1]?.body).toBe(vi.mocked(fetch).mock.calls[0]?.[1]?.body);
   });
 

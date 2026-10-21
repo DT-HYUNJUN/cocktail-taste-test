@@ -208,7 +208,7 @@ Zustand의 persist 기능을 활용하여 테스트 진행 상태를 `sessionSto
 
 추천 결과는 React Query mutation의 성공 데이터로 받아 화면에 표시한다.
 
-새로고침 복구를 위해 결과의 직렬화 가능한 스냅샷을 별도의 `sessionStorage` 항목에 저장한다.
+새로고침 복구를 위해 결과의 직렬화 가능한 스냅샷을 별도의 `sessionStorage` 항목인 `cocktail-taste-test:recommendation-result`에 저장한다. 현재 스키마 버전은 `1`이다.
 
 결과 복구 정책:
 
@@ -218,6 +218,8 @@ Zustand의 persist 기능을 활용하여 테스트 진행 상태를 `sessionSto
 - 유효한 결과가 없으면 `/test`로 이동할 수 있도록 안내
 - 새 테스트를 시작하면 이전 결과를 초기화
 - 새 제출을 시작할 때는 이전 결과와 새 답변이 혼합되지 않도록 처리
+- `sessionStorage` 접근 실패 시 현재 클라이언트 이동에 한해 메모리 스냅샷 사용
+- 저장 및 복구 양쪽에서 `parseRecommendationResponse()`로 HTTP Contract 검증
 
 Zustand를 추천 결과의 별도 영구 상태 저장소로 사용하지 않는다.
 
