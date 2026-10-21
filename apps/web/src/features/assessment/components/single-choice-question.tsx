@@ -1,9 +1,9 @@
-import type { SingleQuestion } from "../model/questions";
+import type { ScaleAnswerId, SingleQuestion } from "../model/questions";
 
 type SingleChoiceQuestionProps = {
   question: SingleQuestion;
   answer?: string;
-  onChange: (value: string) => void;
+  onChange: (value: ScaleAnswerId) => void;
 };
 
 export function SingleChoiceQuestion({ question, answer, onChange }: SingleChoiceQuestionProps) {

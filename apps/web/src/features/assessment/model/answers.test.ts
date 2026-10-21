@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { serializeAssessmentAnswers, type AssessmentAnswers } from "./answers";
+import { serializeAssessmentAnswers, validatePartialAssessmentAnswers, type AssessmentAnswers } from "./answers";
 
 const completeAnswers: AssessmentAnswers = {
   sweet: "medium",
@@ -28,7 +28,7 @@ describe("serializeAssessmentAnswers", () => {
 
   it("rejects missing and invalid answers", () => {
     expect(serializeAssessmentAnswers({ ...completeAnswers, sweet: undefined })).toBeNull();
-    expect(serializeAssessmentAnswers({ ...completeAnswers, sweet: "invalid" })).toBeNull();
+    expect(validatePartialAssessmentAnswers({ ...completeAnswers, sweet: "invalid" })).toBeNull();
     expect(serializeAssessmentAnswers({ ...completeAnswers, "preferred-flavors": ["citrus"], "avoided-flavors": ["citrus"] })).toBeNull();
     expect(serializeAssessmentAnswers({ ...completeAnswers, "preferred-base-spirits": ["gin", "rum", "vodka"] })).toBeNull();
   });
