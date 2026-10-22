@@ -31,7 +31,7 @@ vi.mock('../data-source', () => ({
 }));
 
 import { CocktailEntity } from '../../cocktails/entities/cocktail.entity';
-import { seedCocktails } from './seed-cocktails';
+import { isSeedCliEntry, seedCocktails } from './seed-cocktails';
 import type { CocktailSeed } from './cocktail-seed.types';
 
 function createSeed(overrides: Partial<CocktailSeed> = {}): CocktailSeed {
@@ -186,5 +186,19 @@ describe('seedCocktails', () => {
     );
 
     expect(mocks.destroy).toHaveBeenCalledOnce();
+  });
+});
+
+describe('isSeedCliEntry', () => {
+  it.each([
+    '/workspace/apps/api/src/database/seeds/seed-cocktails.ts',
+    '/app/dist/database/seeds/seed-cocktails.js',
+    'C:\\app\\dist\\database\\seeds\\seed-cocktails.js',
+  ])('accepts source and compiled CLI entry paths: %s', (entryPath) => {
+    expect(isSeedCliEntry(entryPath)).toBe(true);
+  });
+
+  it('rejects imports from another entry point', () => {
+    expect(isSeedCliEntry('/app/dist/main.js')).toBe(false);
   });
 });

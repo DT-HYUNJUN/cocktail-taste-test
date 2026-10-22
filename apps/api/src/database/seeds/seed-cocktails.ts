@@ -65,7 +65,13 @@ async function main() {
   console.log(`Seed processed: ${count} cocktails`);
 }
 
-if (process.argv[1]?.replaceAll('\\', '/').endsWith('/seed-cocktails.ts')) {
+export function isSeedCliEntry(entryPath: string | undefined): boolean {
+  return /\/seed-cocktails\.[cm]?[jt]s$/.test(
+    entryPath?.replaceAll('\\', '/') ?? '',
+  );
+}
+
+if (isSeedCliEntry(process.argv[1])) {
   main().catch((error: unknown) => {
     console.error(error);
     process.exitCode = 1;
