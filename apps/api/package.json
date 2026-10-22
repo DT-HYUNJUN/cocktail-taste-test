@@ -24,6 +24,7 @@
     "test:e2e": "vitest run --config vitest.e2e.config.ts"
   },
   "dependencies": {
+    "@cocktail-taste-test/contracts": "workspace:*",
     "@cocktail-taste-test/domain": "workspace:*",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^12.0.1",

@@ -8,6 +8,7 @@ import {
   Post,
 } from '@nestjs/common';
 import { AssessmentValidationError } from '@cocktail-taste-test/domain';
+import type { RecommendationResponse } from '@cocktail-taste-test/contracts';
 
 import { RecommendationService } from './recommendation.service';
 
@@ -20,7 +21,7 @@ export class RecommendationController {
 
   @Post()
   @HttpCode(HttpStatus.OK)
-  async recommend(@Body() body: unknown) {
+  async recommend(@Body() body: unknown): Promise<RecommendationResponse> {
     if (
       typeof body !== 'object' ||
       body === null ||
