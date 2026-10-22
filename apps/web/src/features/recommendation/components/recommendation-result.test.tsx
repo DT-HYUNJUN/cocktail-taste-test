@@ -29,7 +29,7 @@ const result: RecommendationResponse = {
       { type: "flavor-match", flavors: ["citrus"] },
       { type: "base-spirit-match", baseSpirits: ["gin"] },
     ]),
-    cocktail("a-second", 2), cocktail("third", 3), cocktail("fourth", 4), cocktail("fifth", 5), cocktail("sixth", 6),
+    cocktail("a-second", 2), cocktail("third", 3), cocktail("fourth", 4), cocktail("fifth", 5),
   ],
 };
 
@@ -53,7 +53,6 @@ describe("RecommendationResult", () => {
     expect(cards).toHaveLength(5);
     expect(cards[0]).toHaveTextContent("Cocktail z-first");
     expect(cards[1]).toHaveTextContent("Cocktail a-second");
-    expect(screen.queryByText("Cocktail sixth")).not.toBeInTheDocument();
     expect(screen.getByText("선호하는 단맛·청량감과 잘 어울려요")).toBeVisible();
     expect(screen.getByText("좋아하는 시트러스 풍미가 있어요")).toBeVisible();
     expect(screen.getByText("선호하는 진 베이스 칵테일이에요")).toBeVisible();

@@ -83,10 +83,40 @@ export function isRecommendationResponse(value: unknown): value is Recommendatio
     isArrayOf(profile.preferredFlavors, (item): item is Flavor => isMember(FLAVORS, item)) &&
     isArrayOf(profile.avoidedFlavors, (item): item is Flavor => isMember(FLAVORS, item)) &&
     isArrayOf(profile.preferredBaseSpirits, (item): item is BaseSpirit => isMember(BASE_SPIRITS, item));
-  return validProfile && isArrayOf(value.recommendations, (item): item is RecommendationItem =>
+  if (!validProfile || !isArrayOf(value.recommendations, (item): item is RecommendationItem =>
     isRecord(item) && hasOnlyKeys(item, ['rank', 'cocktail', 'reasons']) &&
     typeof item.rank === 'number' && Number.isInteger(item.rank) && item.rank >= 1 &&
-    isCocktail(item.cocktail) && isArrayOf(item.reasons, isReason));
+    isCocktail(item.cocktail) && isArrayOf(item.reasons, isReason)) || value.recommendations.length > 5) return false;
+
+  const response = value as RecommendationResponse;
+  const profileDimensions = new Map(response.profile.dimensions.map(({ dimension, score }) => [dimension, score]));
+  if (profileDimensions.size !== response.profile.dimensions.length) return false;
+  const cocktailIds = new Set<string>();
+  const reasonOrder = ['core-match', 'flavor-match', 'base-spirit-match'] as const;
+
+  return response.recommendations.every((item, index) => {
+    if (item.rank !== index + 1 || cocktailIds.has(item.cocktail.id)) return false;
+    cocktailIds.add(item.cocktail.id);
+    if (new Set(item.cocktail.flavors).size !== item.cocktail.flavors.length || new Set(item.cocktail.baseSpirits).size !== item.cocktail.baseSpirits.length) return false;
+    let previousReasonIndex = -1;
+    return item.reasons.every((reason) => {
+      const currentReasonIndex = reasonOrder.indexOf(reason.type);
+      if (currentReasonIndex <= previousReasonIndex) return false;
+      previousReasonIndex = currentReasonIndex;
+      if (reason.type === 'core-match') {
+        return reason.dimensions.length > 0 && reason.dimensions.length <= 2 && new Set(reason.dimensions).size === reason.dimensions.length &&
+          reason.dimensions.every((dimension) => {
+            const score = profileDimensions.get(dimension);
+            return score !== undefined && Math.abs(score - item.cocktail.dimensions[dimension]) <= 1;
+          });
+      }
+      if (reason.type === 'flavor-match') {
+        return reason.flavors.length > 0 && reason.flavors.length <= 2 && new Set(reason.flavors).size === reason.flavors.length &&
+          reason.flavors.every((flavor) => response.profile.preferredFlavors.includes(flavor) && item.cocktail.flavors.includes(flavor));
+      }
+      return reason.baseSpirits.length === 1 && response.profile.preferredBaseSpirits.includes(reason.baseSpirits[0]!) && item.cocktail.baseSpirits.includes(reason.baseSpirits[0]!);
+    });
+  });
 }
 
 export function parseRecommendationResponse(value: unknown): RecommendationResponse {

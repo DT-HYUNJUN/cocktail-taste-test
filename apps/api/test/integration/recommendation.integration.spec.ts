@@ -8,6 +8,7 @@ import {
   it,
 } from 'vitest';
 import type { DataSource } from 'typeorm';
+import { parseRecommendationResponse } from '@cocktail-taste-test/contracts';
 
 import { CocktailEntity } from '../../src/cocktails/entities/cocktail.entity';
 import { TypeOrmCocktailReader } from '../../src/cocktails/infrastructure/typeorm-cocktail.reader';
@@ -124,6 +125,9 @@ describe('Recommendation Integration', () => {
     );
 
     expect(new Set(recommendedIds).size).toBe(5);
+    const parsed = parseRecommendationResponse(result);
+    expect(parsed.recommendations.map(({ rank }) => rank)).toEqual([1, 2, 3, 4, 5]);
+    expect(parsed.recommendations.some(({ reasons }) => reasons.length > 0)).toBe(true);
   });
 
   it('동일한 입력에 대해 추천 결과가 안정적이다', async () => {

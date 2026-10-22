@@ -13,6 +13,7 @@ import {
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
 import { DataSource } from 'typeorm';
+import { parseRecommendationResponse } from '@cocktail-taste-test/contracts';
 
 import { AppModule } from '../../src/app.module';
 import { CocktailEntity } from '../../src/cocktails/entities/cocktail.entity';
@@ -170,6 +171,9 @@ describe('Recommendation HTTP E2E', () => {
     expect(response.status).toBe(200);
     expect(response.body.recommendations).toHaveLength(1);
     expect(response.body.recommendations[0].cocktail.id).toBe('mojito');
+    const result = parseRecommendationResponse(response.body);
+    expect(result.recommendations.map(({ rank }) => rank)).toEqual([1]);
+    expect(result.recommendations[0]?.reasons.length).toBeGreaterThan(0);
   });
 
   it('잘못된 Assessment 답변에 HTTP 400을 반환한다', async () => {

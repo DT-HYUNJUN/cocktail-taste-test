@@ -12,6 +12,8 @@
     "lint": "turbo lint && eslint scripts tests",
     "typecheck": "turbo typecheck",
     "test": "turbo test && vitest run --config vitest.tools.config.ts",
+    "test:integration": "pnpm --filter api test:integration && pnpm --filter api test:e2e",
+    "test:e2e:web": "pnpm --filter web test:e2e",
     "test:architecture": "tsx scripts/check-architecture.ts",
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm test:architecture && pnpm build"
   },

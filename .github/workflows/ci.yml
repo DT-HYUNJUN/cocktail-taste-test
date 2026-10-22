@@ -39,8 +39,25 @@ jobs:
       - name: Quality Gate
         run: pnpm check
 
+      - name: Install Playwright Chromium
+        run: pnpm --filter web exec playwright install --with-deps chromium
+
+      - name: Web browser E2E tests
+        run: pnpm test:e2e:web
+
       - name: Database integration tests
         run: pnpm --filter api test:integration
 
       - name: HTTP E2E tests
         run: pnpm --filter api test:e2e
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            apps/web/playwright-report/
+            apps/web/test-results/
+          if-no-files-found: ignore
+          retention-days: 7

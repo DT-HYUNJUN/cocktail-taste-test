@@ -29,4 +29,18 @@ describe('recommendation HTTP contract', () => {
     expect(isRecommendationResponse({ ...response, profile: { ...response.profile, preferredFlavors: ['salty'] } })).toBe(false);
     expect(() => parseRecommendationResponse({ ...response, recommendations: [{ rank: 1, cocktail: {} }] })).toThrow('Invalid recommendation response');
   });
+
+  it('rejects non-consecutive ranks, duplicate cocktails, and more than five recommendations', () => {
+    const item = response.recommendations[0]!;
+    expect(isRecommendationResponse({ ...response, recommendations: [{ ...item, rank: 2 }] })).toBe(false);
+    expect(isRecommendationResponse({ ...response, recommendations: [item, { ...item, rank: 2 }] })).toBe(false);
+    expect(isRecommendationResponse({ ...response, recommendations: Array.from({ length: 6 }, (_, index) => ({ ...item, rank: index + 1, cocktail: { ...item.cocktail, id: `cocktail-${index}` } })) })).toBe(false);
+  });
+
+  it('rejects reasons without matching profile and cocktail evidence', () => {
+    const item = response.recommendations[0]!;
+    expect(isRecommendationResponse({ ...response, recommendations: [{ ...item, reasons: [{ type: 'flavor-match', flavors: ['herbal'] }] }] })).toBe(false);
+    expect(isRecommendationResponse({ ...response, recommendations: [{ ...item, reasons: [{ type: 'base-spirit-match', baseSpirits: ['rum'] }] }] })).toBe(false);
+    expect(isRecommendationResponse({ ...response, recommendations: [{ ...item, reasons: [{ type: 'core-match', dimensions: ['refreshing'] }] }] })).toBe(false);
+  });
 });
