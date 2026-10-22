@@ -432,3 +432,36 @@ React Query는 요청의 pending/success/error 상태만 관리한다. 성공 �
 - 사용자 인증 및 즐겨찾기
 
 이 항목들은 P4-01의 확정된 핵심 정책을 변경하지 않는 범위에서 후속 단계에 다룬다.
+
+## 16. Phase 4 Implemented Scope
+
+Phase 4의 현재 구현 범위는 다음과 같다.
+
+- `/`, `/test`, `/result`의 익명 핵심 흐름
+- Assessment v1의 8개 질문, 답변 수정, 선택 제한 및 접근성 있는 포커스 이동
+- Zustand와 versioned `sessionStorage`를 사용한 진행 상태 복구
+- Next.js Route Handler와 TanStack Query를 사용한 NestJS 추천 API 연동
+- 런타임 HTTP Contract 검증, 오류 후 명시적 재시도 및 중복 제출 방지
+- Taste Profile, 최대 5개 추천 카드, 구조화된 추천 이유 및 빈 추천 결과 표시
+- versioned 결과 snapshot 복구와 다시 테스트하기
+- Vitest/RTL, Playwright, PostgreSQL 통합 및 NestJS HTTP E2E 품질 게이트
+
+추천 계산과 추천 이유 생성은 계속 Backend Domain의 책임이다. Web은 API의 rank를 그대로 표시하고 임의의 점수나 근거를 만들지 않는다.
+
+## 17. Deployment Boundary and Readiness
+
+현재 저장소에는 특정 배포 플랫폼을 확정한 실행 설정이 없다. Architecture의 목표 환경은 GCP이지만 Next.js, NestJS, PostgreSQL에 사용할 구체적인 GCP 서비스와 네트워크 토폴로지는 아직 결정되지 않았다.
+
+현재 확인된 배포 전 필수 작업은 다음과 같다.
+
+- Next.js와 NestJS의 런타임 서비스 및 리전 선택
+- 운영 PostgreSQL 인스턴스, private connectivity, backup 및 복구 정책 선택
+- `API_BASE_URL`과 `DATABASE_*`를 플랫폼의 Secret/환경 변수로 주입하고 저장소에 비밀값을 커밋하지 않는 절차
+- 배포 전에 `db:migrate`를 한 번만 실행하는 release job과 실패 시 중단/복구 절차
+- 승인된 catalog만 별도 절차로 seed/활성화하는 정책; 기본 `is_active=false`는 유지
+- API health/readiness endpoint, 구조화 로그, 오류 추적 및 알림 추가
+- 외부 HTTPS 종단과 Web→API 내부 통신 보안 결정
+
+브라우저는 Web의 동일 출처 Route Handler만 호출하므로 현재 구조에서는 브라우저→NestJS CORS가 필요하지 않다. 향후 브라우저가 API를 직접 호출하도록 바꾸는 경우에만 허용 origin을 명시적으로 제한한다.
+
+상세한 로컬/CI 검증과 단계별 배포 제안은 `docs/testing/frontend-e2e.md`를 따른다.

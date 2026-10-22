@@ -113,6 +113,38 @@ describe('Recommendation Integration', () => {
     ]);
   });
 
+  it('요청 답변과 일치하는 프로필과 실제 칵테일 근거를 반환한다', async () => {
+    await insertCocktails(['tom-collins']);
+
+    const result = parseRecommendationResponse(
+      await service.recommend(answers),
+    );
+
+    expect(result.profile).toEqual({
+      dimensions: [
+        { dimension: 'sweet', score: 3 },
+        { dimension: 'sour', score: 4 },
+        { dimension: 'bitter', score: 2 },
+        { dimension: 'alcoholIntensity', score: 3 },
+        { dimension: 'refreshing', score: 5 },
+      ],
+      preferredFlavors: ['citrus'],
+      avoidedFlavors: [],
+      preferredBaseSpirits: ['gin'],
+    });
+    expect(result.recommendations).toEqual([
+      expect.objectContaining({
+        rank: 1,
+        cocktail: expect.objectContaining({ id: 'tom-collins' }),
+        reasons: [
+          { type: 'core-match', dimensions: ['refreshing', 'sour'] },
+          { type: 'flavor-match', flavors: ['citrus'] },
+          { type: 'base-spirit-match', baseSpirits: ['gin'] },
+        ],
+      }),
+    ]);
+  });
+
   it('후보가 5개를 초과하면 상위 5개만 반환한다', async () => {
     await insertCocktails(cocktailSeeds.map(({ id }) => id));
 

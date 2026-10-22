@@ -149,18 +149,18 @@ describe('Recommendation HTTP E2E', () => {
     expect(response.status).toBe(400);
   });
 
-  it('활성화된 DB 칵테일을 추천 결과에 포함한다', async () => {
+  it('활성화된 DB 칵테일과 답변에 근거한 프로필 및 이유를 반환한다', async () => {
     await dataSource.getRepository(CocktailEntity).insert({
-      id: 'mojito',
-      name: 'Mojito',
+      id: 'tom-collins',
+      name: 'Tom Collins',
       imageUrl: null,
       sweet: 3,
       sour: 4,
       bitter: 1,
       alcoholIntensity: 2,
       refreshing: 5,
-      flavors: ['citrus', 'herbal'],
-      baseSpirits: ['rum'],
+      flavors: ['citrus'],
+      baseSpirits: ['gin'],
       isActive: true,
     });
 
@@ -170,10 +170,30 @@ describe('Recommendation HTTP E2E', () => {
 
     expect(response.status).toBe(200);
     expect(response.body.recommendations).toHaveLength(1);
-    expect(response.body.recommendations[0].cocktail.id).toBe('mojito');
     const result = parseRecommendationResponse(response.body);
-    expect(result.recommendations.map(({ rank }) => rank)).toEqual([1]);
-    expect(result.recommendations[0]?.reasons.length).toBeGreaterThan(0);
+    expect(result.profile).toEqual({
+      dimensions: [
+        { dimension: 'sweet', score: 3 },
+        { dimension: 'sour', score: 4 },
+        { dimension: 'bitter', score: 2 },
+        { dimension: 'alcoholIntensity', score: 3 },
+        { dimension: 'refreshing', score: 5 },
+      ],
+      preferredFlavors: ['citrus'],
+      avoidedFlavors: [],
+      preferredBaseSpirits: ['gin'],
+    });
+    expect(result.recommendations).toEqual([
+      expect.objectContaining({
+        rank: 1,
+        cocktail: expect.objectContaining({ id: 'tom-collins' }),
+        reasons: [
+          { type: 'core-match', dimensions: ['refreshing', 'sour'] },
+          { type: 'flavor-match', flavors: ['citrus'] },
+          { type: 'base-spirit-match', baseSpirits: ['gin'] },
+        ],
+      }),
+    ]);
   });
 
   it('잘못된 Assessment 답변에 HTTP 400을 반환한다', async () => {

@@ -82,7 +82,9 @@ The test database must be named exactly `cocktail_taste_test`. The helpers rejec
 pnpm test:integration
 ```
 
-The suite applies migrations, inserts deterministic seed fixtures, confirms active-candidate filtering, exercises the real NestJS `POST /recommendations` boundary, and validates ranks and reasons with the shared runtime Contract.
+The suite applies migrations, inserts deterministic seed fixtures, confirms active-candidate filtering, exercises the real NestJS `POST /recommendations` boundary, and validates ranks and reasons with the shared runtime Contract. It also asserts that the exact request answers produce the expected Taste Profile and that each reason is supported by both the profile and the persisted cocktail data.
+
+The local Compose database is `cocktail_taste`, while destructive test cleanup accepts only `cocktail_taste_test` on `127.0.0.1`, `localhost`, or `::1`. Tests reject any other database name or remote host. Ordinary seed execution is insert-only and rejects `is_active=true`; tests create active copies only inside the isolated test database.
 
 ## CI
 
@@ -94,6 +96,41 @@ The pull-request workflow performs:
 4. PostgreSQL integration tests;
 5. NestJS HTTP E2E tests;
 6. Playwright report and failure artifact upload when browser tests fail.
+
+The workflow is triggered only by `pull_request`. Local success must not be reported as GitHub Actions success; the pull request run and all job steps must complete successfully before merge.
+
+## Phase 4 release verification
+
+Run the following from the repository root:
+
+```bash
+pnpm check
+pnpm test:e2e:web
+pnpm test:integration
+```
+
+The browser fixture uses five `medium` core answers, preferred `citrus`, avoided `smoky`, and preferred base spirit `gin`. Its profile scores, Tom Collins data, and core/flavor/base-spirit reasons are consistent with the Domain transformation and reason builder. This is still a Mock browser boundary; the separate PostgreSQL and HTTP E2E suites protect the real Backend path.
+
+## Deployment preparation
+
+Deployment is not implemented by Phase 4. The repository currently has no production Docker image, Infrastructure as Code, selected GCP runtime, production health endpoint, or observability integration. The NestJS application uses framework logging and listens on `PORT`; the Web Route Handler reads the server-only `API_BASE_URL`. Database configuration comes from `DATABASE_HOST`, `DATABASE_PORT`, `DATABASE_USER`, `DATABASE_PASSWORD`, and `DATABASE_NAME` with `synchronize: false`.
+
+Prepare deployment in these independently verifiable steps:
+
+1. Decide the GCP topology: recommended candidates are a managed Next.js-capable runtime for Web, Cloud Run for API, and Cloud SQL for PostgreSQL. Confirm regions, cost, scaling, and whether Web can reach API privately before implementation.
+2. Add reproducible production builds/containers and local smoke tests without changing application boundaries.
+3. Provision an isolated staging database, private connectivity, least-privilege service accounts, backups, and Secret Manager values.
+4. Add API liveness/readiness endpoints and verify database dependency behavior. Configure structured logs, error reporting, dashboards, and alerts.
+5. Add a release migration job that runs committed migrations once before traffic. Keep seed and activation separate; do not automatically activate the current catalog.
+6. Deploy API, configure Web's server-only `API_BASE_URL`, then deploy Web. Terminate public traffic with HTTPS. Because the browser calls the same-origin Route Handler, the API does not need broad browser CORS.
+7. Run staging smoke tests against the real API/database, verify at least one separately approved active cocktail, rollback behavior, and failure visibility before production promotion.
+
+Known release constraints:
+
+- the default seed intentionally yields zero recommendations until catalog activation is approved;
+- sessionStorage results are tab-scoped and are not durable/shareable URLs;
+- Mock Playwright and real Backend/DB verification remain separate suites;
+- production hosting, secrets, health checks, monitoring, backups, and migration orchestration are pending deployment work.
 
 ## Manual accessibility checklist
 
