@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => {
     into: vi.fn(),
     values: vi.fn(),
     orIgnore: vi.fn(),
+    returning: vi.fn(),
     execute,
   };
 
@@ -57,7 +58,7 @@ describe('seedCocktails', () => {
 
     mocks.initialize.mockResolvedValue(undefined);
     mocks.destroy.mockResolvedValue(undefined);
-    mocks.execute.mockResolvedValue({ identifiers: [] });
+    mocks.execute.mockResolvedValue({ raw: [{ id: 'inserted' }] });
 
     const builder = mocks.queryBuilder;
 
@@ -65,6 +66,7 @@ describe('seedCocktails', () => {
     builder.into.mockReturnValue(builder);
     builder.values.mockReturnValue(builder);
     builder.orIgnore.mockReturnValue(builder);
+    builder.returning.mockReturnValue(builder);
 
     mocks.createQueryBuilder.mockReturnValue(builder);
 
@@ -107,6 +109,7 @@ describe('seedCocktails', () => {
     });
 
     expect(mocks.queryBuilder.orIgnore).toHaveBeenCalledOnce();
+    expect(mocks.queryBuilder.returning).toHaveBeenCalledWith(['id']);
     expect(mocks.execute).toHaveBeenCalledOnce();
     expect(mocks.destroy).toHaveBeenCalledOnce();
   });
@@ -124,6 +127,14 @@ describe('seedCocktails', () => {
 
     expect(mocks.execute).toHaveBeenCalledTimes(2);
     expect(mocks.queryBuilder.orIgnore).toHaveBeenCalledTimes(2);
+  });
+
+  it('returns zero when every stable ID already exists', async () => {
+    mocks.execute.mockResolvedValue({ raw: [] });
+
+    await expect(seedCocktails([createSeed()])).resolves.toBe(0);
+
+    expect(mocks.queryBuilder.orIgnore).toHaveBeenCalledOnce();
   });
 
   it('충돌을 무시하는 INSERT 정책을 사용한다', async () => {

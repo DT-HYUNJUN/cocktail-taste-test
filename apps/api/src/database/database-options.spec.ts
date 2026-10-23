@@ -46,6 +46,38 @@ describe('createDatabaseConnectionOptions', () => {
     });
   });
 
+  it('uses a separate direct endpoint for production maintenance commands', () => {
+    setRequiredEnvironment();
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('MIGRATION_DATABASE_HOST', 'direct.example.neon.tech');
+    vi.stubEnv('MIGRATION_DATABASE_PORT', '5432');
+    vi.stubEnv('MIGRATION_DATABASE_USER', 'migration_role');
+    vi.stubEnv('MIGRATION_DATABASE_PASSWORD', 'migration_secret');
+    vi.stubEnv('MIGRATION_DATABASE_NAME', 'cocktail');
+    vi.stubEnv('MIGRATION_DATABASE_SSL_MODE', 'verify-full');
+
+    const options = createDatabaseConnectionOptions('maintenance');
+
+    expect(options).toEqual(
+      expect.objectContaining({
+        host: 'direct.example.neon.tech',
+        username: 'migration_role',
+        database: 'cocktail',
+        poolSize: 1,
+        ssl: { rejectUnauthorized: true },
+      }),
+    );
+  });
+
+  it('requires explicit maintenance variables in production', () => {
+    setRequiredEnvironment();
+    vi.stubEnv('NODE_ENV', 'production');
+
+    expect(() => createDatabaseConnectionOptions('maintenance')).toThrow(
+      'Missing database environment variable: MIGRATION_DATABASE_HOST',
+    );
+  });
+
   it('rejects invalid SSL and pool configuration', () => {
     setRequiredEnvironment();
     vi.stubEnv('DATABASE_SSL_MODE', 'sometimes');

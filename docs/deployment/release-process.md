@@ -1,8 +1,8 @@
 # Release Process
 
-Status: Proposed  
-Version: 0.2
-Phase: 5 / P5-04
+Status: Proposed
+Version: 0.3
+Phase: 5 / P5-05
 Last Updated: 2026-10-22
 
 ## 1. Current CI baseline
@@ -93,3 +93,18 @@ The preferred serverless path supersedes the EC2 flow only when its deployment d
 10. Record CloudWatch usage, API Gateway requests, Lambda duration/errors/throttles, and actual cost against the estimate.
 
 Application rollback restores the prior ZIP/version only when schema-compatible. Authentication rollback may temporarily restore the previous secret as current, but must remain time-bounded and audited. Migration rollback remains manual and evidence-preserving as described above.
+
+## 10. Neon data release gate
+
+Before every schema/data release:
+
+1. Confirm runtime points to the pooled endpoint and maintenance commands point to the direct endpoint.
+2. Create an encrypted logical backup through the direct endpoint and verify its SHA-256.
+3. Restore the selected backup into an isolated database/branch and run the checks in `database-restore.md`.
+4. Run `db:show`, then `db:migrate`; run `db:show` again and require no pending migration.
+5. Run Seed only when initial catalog rows are missing. A repeated run must report zero inserts and must not change `is_active`.
+6. Require a separate reviewed statement for any catalog activation. Seed cannot activate data.
+7. Run readiness, signed recommendation, inactive-filtering, and approved-active-data smoke tests.
+8. Record backup checksum, migration IDs, actual inserted Seed count, active row count, artifact checksum, and rollback compatibility.
+
+Migration or restore failure stops the release. Never automatically revert a production migration, overwrite production from a dump, or promote an unverified isolated restore.

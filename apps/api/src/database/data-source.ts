@@ -8,7 +8,7 @@ import { createDatabaseConnectionOptions } from './database-options';
 config({ path: '.env' });
 
 export const AppDataSource = new DataSource({
-  ...createDatabaseConnectionOptions(),
+  ...createDatabaseConnectionOptions('maintenance'),
   entities: [CocktailEntity],
   synchronize: false,
   migrationsTableName: 'typeorm_migrations',
