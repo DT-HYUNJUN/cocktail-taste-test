@@ -1,15 +1,15 @@
 # Serverless Deployment Decision
 
 Status: Proposed  
-Version: 0.1  
-Phase: 5 / P5-02A  
-Last Updated: 2026-10-22
+Version: 0.2
+Phase: 5 / P5-03
+Last Updated: 2026-10-23
 
 ## 1. Decision
 
 Proceed to implementation planning with **Vercel + API Gateway HTTP API + AWS Lambda + Neon PostgreSQL** as the preferred Phase 5 portfolio architecture.
 
-This decision is provisional until P5-03 proves the cold path, TypeORM pooling, migrations, authentication, and current provider limits. It does not authorize resource creation or paid deployment. Existing EC2 and Docker documents/assets remain intact as an alternative deployment and operational-learning path.
+P5-03 proved the Lambda adapter, Payload Format 2.0 contract, bounded database reconnection, and local PostgreSQL path. The decision remains provisional until P5-04 proves real AWS/Neon cold paths, authentication, migrations, and current provider limits. It does not authorize resource creation or paid deployment. Existing EC2 and Docker documents/assets remain intact as an alternative deployment and operational-learning path.
 
 ## 2. Why this candidate
 
@@ -53,20 +53,26 @@ Visitor submits 8 answers
 
 The first attempt is expected to be viable, but the combined cold path must be measured. A bounded retry and honest “server waking” message are required safeguards, consistent with P-006 Recoverable Failure. Provisioned Concurrency and keep-warm traffic are not the default because they add cost or deliberately evade idle policies.
 
-## 5. Implementation guardrails for P5-03
+## 5. Implemented in P5-03
 
-1. Add a Lambda entry point without removing the Docker/local `main.ts` entry point.
-2. Cache Nest application initialization and TypeORM state per warm environment, but handle stale or absent connections.
-3. Use Neon pooled TLS connection details for runtime. Use the provider-approved direct/session endpoint for migration tooling when required.
-4. Start with Lambda arm64, 512 MB, 15-second timeout, and reserved concurrency 2; tune only from measurements.
-5. Do not attach Lambda to a customer VPC and do not create a NAT Gateway for a public managed database.
-6. Route only through API Gateway HTTP API; the browser continues to call the Vercel same-origin Route Handler.
-7. Add server-to-server authentication, explicit timeout, one bounded transient retry, request-size validation, throttling, and secret/log redaction.
-8. Keep `synchronize: false`; run migration as an explicit release gate, seed explicitly, and never initialize production data during Lambda startup.
-9. Preserve completed answers when cold-start or database wake fails. Do not change recommendation scoring, filtering, ranking, or reasons.
-10. Add infrastructure as code and a plan/dry-run review. Creating AWS/Neon resources still requires explicit user approval.
+1. Added a Lambda entry point while retaining Docker/local `main.ts`.
+2. Cached one in-flight/successful Nest initialization per warm environment and cleared a rejected initialization promise.
+3. Added Lambda-aware pool size, TLS mode, connection timeout, idle timeout, connection probe, and one bounded reconnect.
+4. Built a Node.js 22 ZIP bundle with application/workspace code, TypeORM entities/migration, and the pure-JavaScript `pg` runtime.
+5. Added a SAM draft for arm64, 512 MB, 15-second timeout, reserved concurrency 2, HTTP API v2, and 14-day logs.
+6. Required an external request-authorizer ARN in the template rather than creating a public unauthenticated API default.
+7. Kept `synchronize: false`, explicit migration/seed commands, Docker Compose, and Domain v1 unchanged.
 
-## 6. Required proof before final selection
+## 6. P5-03 verification record
+
+- API unit tests: 78 passed, including initialization reuse, concurrent initialization, failed-initialization retry, and bounded DB reconnect.
+- Existing NestJS HTTP E2E: 4 passed.
+- Lambda HTTP API Payload 2.0 E2E: 3 passed (`GET /health`, valid `POST /recommendations`, invalid request HTTP 400).
+- ZIP build: passed; approximately 1.15 MB compressed and 6.22 MB uncompressed on the verification workstation.
+- SAM CLI local was not run because SAM CLI is not installed. Direct Payload 2.0 handler E2E is the equivalent local verification used in this phase.
+- Native AWS arm64 and Neon execution were not run because creating those resources is outside P5-03.
+
+## 7. Required proof before production selection
 
 - Bundle/deploy artifact builds for Node.js 22 arm64 with `contracts` and `domain` included.
 - NestJS handler starts and serves API Gateway v2 events without calling `listen()`.
@@ -81,19 +87,19 @@ The first attempt is expected to be viable, but the combined cold path must be m
 - Logical backup and isolated restore test succeeds.
 - `pnpm.cmd check` and existing integration/E2E suites pass without skips.
 
-## 7. Decision Required before implementation
+## 8. Decision Required before P5-04
 
 - **Endpoint:** approve API Gateway HTTP API as preferred, retaining Function URL only as a fallback.
 - **Authentication:** decide between SigV4 with a narrowly scoped caller identity and a rotated HMAC/shared secret. Confirm Vercel's current workload-identity capability before storing any long-lived AWS credential.
 - **Database:** approve Neon Free for the portfolio workload and select the nearest available region after latency testing.
-- **Artifact:** bundled zip versus Lambda-compatible container image.
-- **Infrastructure as code:** AWS SAM, CDK, or Terraform; choose one before adding deployment configuration.
+- **Artifact:** approve the verified ZIP approach or request a container comparison.
+- **Infrastructure as code:** approve the current AWS SAM draft.
 - **Secrets:** encrypted Lambda variables/SSM Parameter Store versus Secrets Manager after including its exact monthly price.
 - **Backup:** destination, retention, encryption key ownership, RPO/RTO, and restore cadence.
 - **User experience:** final timeout, single-retry conditions, and Korean/English cold-start error copy.
 - **Budget ownership:** billing alert recipients and incident owner; acknowledge that AWS Budgets is not a hard cap.
 
-## 8. Final status
+## 9. Final status
 
-The feasibility study selects candidate B as the strongest fit, with Neon preferred over Supabase for unattended wake behavior and API Gateway preferred over Function URL for a negligible incremental cost. The architecture is **not yet final or deployed**. P5-03 may begin only after the Decision Required items are resolved and explicit approval is given for any cloud resource or charge.
+The feasibility study selects candidate B as the strongest fit, and P5-03 establishes its local implementation baseline. The architecture is **not deployed**. P5-04 may create or invoke cloud resources only after the Decision Required items are resolved and explicit approval is given for every potentially charged action.
 

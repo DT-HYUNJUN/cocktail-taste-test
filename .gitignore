@@ -8,3 +8,4 @@ coverage/
 .env.compose
 playwright-report/
 test-results/
+.lambda/

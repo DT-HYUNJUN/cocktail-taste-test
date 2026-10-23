@@ -1,13 +1,27 @@
 # AWS Deployment Architecture
 
 Status: Proposed  
-Version: 0.1  
-Phase: 5 / P5-01  
-Last Updated: 2026-10-22
+Version: 0.2
+Phase: 5 / P5-03
+Last Updated: 2026-10-23
 
 ## 1. Decision summary
 
-Phase 5의 기본 배포 경계는 다음과 같다.
+비용 검토와 P5-03 로컬 검증을 반영한 우선 배포 후보는 다음과 같다.
+
+```text
+Browser
+  -> Vercel (Next.js)
+  -> same-origin POST /api/recommendations
+  -> Next.js Route Handler
+  -> API Gateway HTTP API
+  -> AWS Lambda (Node.js 22, arm64)
+  -> Neon pooled PostgreSQL over TLS
+```
+
+Lambda Handler와 API Gateway Payload Format 2.0 로컬 E2E는 구현되었다. AWS 및 Neon 리소스는 생성되지 않았으며, 서버 간 인증 방식과 실제 Neon cold-start 검증이 끝나기 전에는 이 구성을 운영 확정으로 취급하지 않는다.
+
+P5-01/P5-02의 EC2 대안은 삭제하지 않는다.
 
 ```text
 Browser
@@ -21,7 +35,7 @@ Browser
        -> PostgreSQL
 ```
 
-이 문서는 설계안이며 AWS 리소스, DNS, 이미지 또는 운영 Secret을 생성하지 않는다. 기존 `docs/architecture/overview.md`의 GCP 방향과 충돌하므로 Phase 5에서는 이 문서를 AWS 배포의 우선 제안으로 취급하되, 전사 Architecture의 인프라 항목을 AWS로 바꾸는 일은 별도 Architecture Decision으로 남긴다.
+EC2 구성은 Docker/호스트 운영 학습 또는 서버리스 부적합 판정 시의 대안이다. 이 문서는 설계안이며 AWS 리소스, DNS, 이미지 또는 운영 Secret을 생성하지 않는다. 기존 `docs/architecture/overview.md`의 GCP 방향과 충돌하므로 Phase 5에서는 이 문서를 AWS 배포의 우선 제안으로 취급하되, 전사 Architecture의 인프라 항목을 AWS로 바꾸는 일은 별도 Architecture Decision으로 남긴다.
 
 ## 2. Why this topology
 
