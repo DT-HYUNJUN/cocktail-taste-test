@@ -1,15 +1,15 @@
 # Serverless Deployment Decision
 
-Status: Proposed  
-Version: 0.2
-Phase: 5 / P5-03
+Status: Selected for Deployment Validation
+Version: 0.3
+Phase: 5 / P5-04
 Last Updated: 2026-10-23
 
 ## 1. Decision
 
 Proceed to implementation planning with **Vercel + API Gateway HTTP API + AWS Lambda + Neon PostgreSQL** as the preferred Phase 5 portfolio architecture.
 
-P5-03 proved the Lambda adapter, Payload Format 2.0 contract, bounded database reconnection, and local PostgreSQL path. The decision remains provisional until P5-04 proves real AWS/Neon cold paths, authentication, migrations, and current provider limits. It does not authorize resource creation or paid deployment. Existing EC2 and Docker documents/assets remain intact as an alternative deployment and operational-learning path.
+P5-03 proved the Lambda adapter, Payload Format 2.0 contract, bounded database reconnection, and local PostgreSQL path. P5-04 locally implements body HMAC authentication, timeout/retry behavior, verified-TLS defaults, safe boundary errors, throttling configuration, and cost controls. The decision remains provisional until a separately approved deployment proves the real AWS/Neon cold path and current provider limits. It does not authorize resource creation or paid deployment. Existing EC2 and Docker documents/assets remain intact as an alternative.
 
 ## 2. Why this candidate
 
@@ -69,7 +69,7 @@ The first attempt is expected to be viable, but the combined cold path must be m
 - Existing NestJS HTTP E2E: 4 passed.
 - Lambda HTTP API Payload 2.0 E2E: 3 passed (`GET /health`, valid `POST /recommendations`, invalid request HTTP 400).
 - ZIP build: passed; approximately 1.15 MB compressed and 6.22 MB uncompressed on the verification workstation.
-- SAM CLI local was not run because SAM CLI is not installed. Direct Payload 2.0 handler E2E is the equivalent local verification used in this phase.
+- SAM CLI was unavailable during P5-03. It was installed later, and the P5-04 template passed `sam validate --lint` with SAM CLI 1.170.0 on 2026-10-23.
 - Native AWS arm64 and Neon execution were not run because creating those resources is outside P5-03.
 
 ## 7. Required proof before production selection
@@ -87,10 +87,18 @@ The first attempt is expected to be viable, but the combined cold path must be m
 - Logical backup and isolated restore test succeeds.
 - `pnpm.cmd check` and existing integration/E2E suites pass without skips.
 
-## 8. Decision Required before P5-04
+## 8. P5-04 security decision
+
+- **Authentication selected:** Vercel signs the exact body and request metadata; the NestJS Lambda entry verifies it before bootstrap or business handling.
+- **Authorizer rejected for body HMAC:** the documented HTTP API authorizer event lacks the original body. A header-only authorizer would add cost but could not establish body integrity.
+- **Replay scope:** five-minute timestamp window, with a documented residual replay possibility inside that window.
+- **Retry:** at most once for network errors and 502/503/504 because recommendation is read-only.
+- **TLS:** production/Lambda defaults to certificate and hostname validation (`verify-full`); local Docker remains non-TLS.
+
+## 9. Decision Required before deployment
 
 - **Endpoint:** approve API Gateway HTTP API as preferred, retaining Function URL only as a fallback.
-- **Authentication:** decide between SigV4 with a narrowly scoped caller identity and a rotated HMAC/shared secret. Confirm Vercel's current workload-identity capability before storing any long-lived AWS credential.
+- **Secret injection:** approve the mechanism that supplies the shared secret without exposing it in command history, change sets, logs, or source control.
 - **Database:** approve Neon Free for the portfolio workload and select the nearest available region after latency testing.
 - **Artifact:** approve the verified ZIP approach or request a container comparison.
 - **Infrastructure as code:** approve the current AWS SAM draft.
@@ -99,7 +107,7 @@ The first attempt is expected to be viable, but the combined cold path must be m
 - **User experience:** final timeout, single-retry conditions, and Korean/English cold-start error copy.
 - **Budget ownership:** billing alert recipients and incident owner; acknowledge that AWS Budgets is not a hard cap.
 
-## 9. Final status
+## 10. Final status
 
-The feasibility study selects candidate B as the strongest fit, and P5-03 establishes its local implementation baseline. The architecture is **not deployed**. P5-04 may create or invoke cloud resources only after the Decision Required items are resolved and explicit approval is given for every potentially charged action.
+The feasibility study selects candidate B as the strongest fit, P5-03 establishes its Lambda baseline, and P5-04 establishes the local security/resilience baseline. The architecture is **not deployed**. A later deployment phase may create or invoke cloud resources only after the remaining decisions and explicit cost approval.
 

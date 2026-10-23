@@ -37,7 +37,12 @@ function readPositiveInteger(name: string, fallback: number): number {
 }
 
 function readSslOptions(): DatabaseConnectionOptions['ssl'] {
-  const mode = process.env.DATABASE_SSL_MODE?.trim().toLowerCase() ?? 'disable';
+  const productionDefault =
+    process.env.NODE_ENV === 'production' || process.env.AWS_LAMBDA_FUNCTION_NAME
+      ? 'verify-full'
+      : 'disable';
+  const mode =
+    process.env.DATABASE_SSL_MODE?.trim().toLowerCase() ?? productionDefault;
 
   if (mode === 'disable') {
     return false;

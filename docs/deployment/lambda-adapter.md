@@ -1,8 +1,8 @@
 # NestJS AWS Lambda Adapter
 
 Status: Implemented Locally  
-Version: 0.1  
-Phase: 5 / P5-03  
+Version: 0.2
+Phase: 5 / P5-04
 Last Updated: 2026-10-23
 
 ## 1. Scope
@@ -30,6 +30,8 @@ Lambda
 
 `GET /health` remains DB-independent liveness. Other routes validate DB connectivity first; `GET /health/ready` also retains its controller-level database probe.
 
+P5-04 adds a fail-closed HMAC boundary before cached NestJS initialization. Missing, expired, invalid, or body-mismatched credentials cannot reach database readiness or Express handling. Boundary initialization/database errors return a generic HTTP 503 rather than escaping as an API Gateway-generated error with an unstable contract. See `serverless-security.md` for the canonical signature and residual replay risk.
+
 ## 3. Database connection policy
 
 The existing discrete database variables remain supported so Docker Compose is unchanged:
@@ -41,12 +43,12 @@ The existing discrete database variables remain supported so Docker Compose is u
 | `DATABASE_USER` | local user | least-privilege application role |
 | `DATABASE_PASSWORD` | local secret | encrypted runtime secret |
 | `DATABASE_NAME` | local database | Neon database |
-| `DATABASE_SSL_MODE` | `disable` | `require`; evaluate `verify-full` with CA configuration |
+| `DATABASE_SSL_MODE` | `disable` | `verify-full` default |
 | `DATABASE_POOL_MAX` | `10` | `1` |
 | `DATABASE_CONNECTION_TIMEOUT_MS` | `5000` | `5000` initial |
 | `DATABASE_IDLE_TIMEOUT_MS` | `30000` | `30000` initial |
 
-Accepted SSL modes are `disable`, `require`, and `verify-full`. `require` encrypts the connection but sets `rejectUnauthorized: false`; production should prefer `verify-full` after the provider CA path is defined and tested.
+Accepted SSL modes are `disable`, `require`, and `verify-full`. `require` encrypts the connection but sets `rejectUnauthorized: false`; production/Lambda now defaults to `verify-full`. Local Docker remains explicitly `disable`.
 
 Before a DB-dependent invocation, the cached TypeORM `DataSource` receives `SELECT 1`. On failure it is destroyed when initialized, initialized once, and probed once more. A second failure is propagated. There is no unbounded reconnect loop. Concurrent validation/recovery in one warm environment shares one recovery promise.
 
@@ -72,8 +74,8 @@ The script:
 Verification result:
 
 - bundled application: approximately 5.5 MB;
-- ZIP: 1,154,836 bytes;
-- uncompressed package: 6,223,489 bytes;
+- ZIP: 1,156,013 bytes;
+- uncompressed package: 6,227,872 bytes;
 - no `.env` file in the archive;
 - no native `.node` dependency required by the runtime package.
 
@@ -92,9 +94,10 @@ TypeORM and NestJS contain dynamic/optional imports. The bundle explicitly exter
 - 14-day CloudWatch log retention;
 - database environment-variable names;
 - no application IAM policies beyond SAM's basic Lambda logging role;
-- a required external request-authorizer ARN.
+- fail-closed HMAC environment-variable names, 64 KiB application body limit, and no unauthenticated application path;
+- HTTP API throttling (5 requests/second, burst 10) and separate 14-day access logs.
 
-The template intentionally has no unauthenticated public default. Authentication implementation remains Decision Required. The draft has not been deployed or validated by SAM CLI.
+The HTTP endpoint is network-public, but the integration rejects every request without a valid body HMAC before NestJS initialization. A Lambda authorizer is intentionally not used because its HTTP API event does not include the original request body. `sam validate --lint` passed with SAM CLI 1.170.0 on 2026-10-23. The draft has not been deployed.
 
 ## 6. Local verification
 
@@ -109,9 +112,13 @@ Executed against the repository's local PostgreSQL test database:
 - Payload 2.0 invalid request returns HTTP 400: passed;
 - existing TCP-based NestJS HTTP E2E: 4 passed;
 - Lambda Payload 2.0 E2E: 3 passed;
-- API unit tests: 78 passed.
+- API unit tests: 83 passed after P5-04 security coverage.
+- Web unit tests: 42 passed, including signing, timeout, bounded retry, and permanent-failure behavior.
+- API integration tests: 7 passed.
+- Browser E2E: 9 passed with the same single-worker policy used by CI.
+- Packaged bundle smoke: unsigned `/health` returned 401; correctly signed `/health` returned 200.
 
-AWS SAM CLI was unavailable on the workstation, so `sam local start-api` was not executed. Direct invocation of realistic Payload 2.0 events through the real adapter provides the local equivalent, but does not reproduce the Lambda OS/runtime boundary.
+`sam validate --lint --template-file infrastructure/sam/template.yaml` passed with SAM CLI 1.170.0. `sam local start-api` was not executed; direct invocation of realistic Payload 2.0 events through the packaged adapter provides the local equivalent, but does not reproduce the Lambda OS/runtime boundary.
 
 ## 7. P5-04 entry conditions
 

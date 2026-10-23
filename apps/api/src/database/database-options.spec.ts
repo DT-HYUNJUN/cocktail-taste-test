@@ -37,6 +37,15 @@ describe('createDatabaseConnectionOptions', () => {
     );
   });
 
+  it('defaults Lambda connections to verified TLS', () => {
+    setRequiredEnvironment();
+    vi.stubEnv('AWS_LAMBDA_FUNCTION_NAME', 'cocktail-api');
+
+    expect(createDatabaseConnectionOptions().ssl).toEqual({
+      rejectUnauthorized: true,
+    });
+  });
+
   it('rejects invalid SSL and pool configuration', () => {
     setRequiredEnvironment();
     vi.stubEnv('DATABASE_SSL_MODE', 'sometimes');

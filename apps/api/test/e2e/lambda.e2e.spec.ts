@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 
+import { createHmac } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type {
   APIGatewayProxyEventV2,
@@ -42,12 +43,21 @@ const context: Context = {
 };
 
 function createEvent(method: string, path: string, body?: unknown): APIGatewayProxyEventV2 {
+  const rawBody = body === undefined ? undefined : JSON.stringify(body);
+  const timestamp = String(Date.now());
+  const signature = createHmac('sha256', 'lambda-e2e-test-secret-at-least-32')
+    .update([timestamp, method, path, rawBody ?? ''].join('\n'))
+    .digest('hex');
   return {
     version: '2.0',
     routeKey: `${method} ${path}`,
     rawPath: path,
     rawQueryString: '',
-    headers: body === undefined ? {} : { 'content-type': 'application/json' },
+    headers: {
+      ...(body === undefined ? {} : { 'content-type': 'application/json' }),
+      'x-cocktail-timestamp': timestamp,
+      'x-cocktail-signature': signature,
+    },
     requestContext: {
       accountId: 'local',
       apiId: 'local',
@@ -66,7 +76,7 @@ function createEvent(method: string, path: string, body?: unknown): APIGatewayPr
       time: '22/Oct/2026:00:00:00 +0000',
       timeEpoch: 0,
     },
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body: rawBody,
     isBase64Encoded: false,
   };
 }
@@ -93,6 +103,7 @@ describe('Lambda HTTP API payload 2.0 E2E', () => {
     vi.stubEnv('DATABASE_NAME', config.database);
     vi.stubEnv('DATABASE_SSL_MODE', 'disable');
     vi.stubEnv('DATABASE_POOL_MAX', '1');
+    vi.stubEnv('API_HMAC_SECRET', 'lambda-e2e-test-secret-at-least-32');
 
     setupDataSource = createTestDataSource();
     await initializeTestDatabase(setupDataSource);

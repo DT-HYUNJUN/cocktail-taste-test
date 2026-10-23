@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
+import { createHmac } from 'node:crypto';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   APIGatewayProxyEventV2,
   APIGatewayProxyResultV2,
@@ -37,6 +38,23 @@ const event: APIGatewayProxyEventV2 = {
   isBase64Encoded: false,
 };
 
+function signEvent(target: APIGatewayProxyEventV2): void {
+  const timestamp = String(Date.now());
+  const payload = [
+    timestamp,
+    target.requestContext.http.method,
+    target.rawPath,
+    target.body ?? '',
+  ].join('\n');
+  target.headers['x-cocktail-timestamp'] = timestamp;
+  target.headers['x-cocktail-signature'] = createHmac(
+    'sha256',
+    'lambda-unit-test-secret-at-least-32',
+  )
+    .update(payload)
+    .digest('hex');
+}
+
 const context: Context = {
   callbackWaitsForEmptyEventLoop: true,
   functionName: 'local',
@@ -59,6 +77,7 @@ const expectedResponse: APIGatewayProxyResultV2 = {
 
 const databaseEvent: APIGatewayProxyEventV2 = {
   ...event,
+  headers: { ...event.headers },
   routeKey: 'POST /recommendations',
   rawPath: '/recommendations',
   requestContext: {
@@ -79,7 +98,19 @@ function createRuntime(): LambdaRuntime {
   };
 }
 
+function responseStatus(response: APIGatewayProxyResultV2 | void): number | undefined {
+  return response && typeof response !== 'string' ? response.statusCode : undefined;
+}
+
 describe('Lambda handler lifecycle', () => {
+  beforeEach(() => {
+    vi.stubEnv('API_HMAC_SECRET', 'lambda-unit-test-secret-at-least-32');
+    signEvent(event);
+    signEvent(databaseEvent);
+  });
+
+  afterEach(() => vi.unstubAllEnvs());
+
   it('reuses one initialization for sequential invocations', async () => {
     const runtime = createRuntime();
     const bootstrap = vi.fn<LambdaRuntimeBootstrap>().mockResolvedValue(runtime);
@@ -119,9 +150,7 @@ describe('Lambda handler lifecycle', () => {
       .mockResolvedValueOnce(runtime);
     const handler = createLambdaHandler(bootstrap);
 
-    await expect(handler(databaseEvent, context, vi.fn())).rejects.toThrow(
-      'temporary initialization failure',
-    );
+    expect(responseStatus(await handler(databaseEvent, context, vi.fn()))).toBe(503);
     await expect(handler(event, context, vi.fn())).resolves.toEqual(
       expectedResponse,
     );
@@ -136,9 +165,7 @@ describe('Lambda handler lifecycle', () => {
     );
     const handler = createLambdaHandler(async () => runtime);
 
-    await expect(handler(databaseEvent, context, vi.fn())).rejects.toThrow(
-      'database unavailable',
-    );
+    expect(responseStatus(await handler(databaseEvent, context, vi.fn()))).toBe(503);
     expect(runtime.invoke).not.toHaveBeenCalled();
   });
 });

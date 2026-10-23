@@ -3,10 +3,16 @@ Transform: AWS::Serverless-2016-10-31
 Description: Draft only - Cocktail Taste Test NestJS API on Lambda. Do not deploy before security approval.
 
 Parameters:
-  ServerAuthAuthorizerArn:
+  ApiHmacSecret:
     Type: String
-    Description: Required ARN of the approved HTTP API request authorizer. No public unauthenticated default is provided.
-    AllowedPattern: "^arn:aws:lambda:[a-z0-9-]+:[0-9]{12}:function:[A-Za-z0-9-_]+(:[A-Za-z0-9-_]+)?$"
+    NoEcho: true
+    MinLength: 32
+    Description: Shared HMAC secret injected by an approved deployment secret mechanism. Never commit a value.
+  ApiHmacPreviousSecret:
+    Type: String
+    NoEcho: true
+    Default: ""
+    Description: Optional previous HMAC secret for a bounded rotation overlap.
   DatabaseHost:
     Type: String
   DatabasePort:
@@ -37,27 +43,27 @@ Globals:
         DATABASE_USER: !Ref DatabaseUser
         DATABASE_PASSWORD: !Ref DatabasePassword
         DATABASE_NAME: !Ref DatabaseName
-        DATABASE_SSL_MODE: require
+        DATABASE_SSL_MODE: verify-full
         DATABASE_POOL_MAX: 1
         DATABASE_CONNECTION_TIMEOUT_MS: 5000
         DATABASE_IDLE_TIMEOUT_MS: 30000
+        API_HMAC_SECRET: !Ref ApiHmacSecret
+        API_HMAC_PREVIOUS_SECRET: !Ref ApiHmacPreviousSecret
+        API_HMAC_MAX_AGE_MS: 300000
+        API_MAX_BODY_BYTES: 65536
 
 Resources:
   CocktailTasteHttpApi:
     Type: AWS::Serverless::HttpApi
     Properties:
       StageName: prod
-      Auth:
-        DefaultAuthorizer: ServerRequestAuthorizer
-        Authorizers:
-          ServerRequestAuthorizer:
-            FunctionArn: !Ref ServerAuthAuthorizerArn
-            AuthorizerPayloadFormatVersion: "2.0"
-            EnableSimpleResponses: true
-            EnableFunctionDefaultPermissions: false
-            Identity:
-              Headers:
-                - authorization
+      FailOnWarnings: true
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 10
+        ThrottlingRateLimit: 5
+      AccessLogSettings:
+        DestinationArn: !GetAtt CocktailTasteApiAccessLogGroup.Arn
+        Format: '{"requestId":"$context.requestId","routeKey":"$context.routeKey","status":"$context.status","responseLength":"$context.responseLength"}'
 
   CocktailTasteApiFunction:
     Type: AWS::Serverless::Function
@@ -88,7 +94,12 @@ Resources:
       LogGroupName: /aws/lambda/cocktail-taste-api
       RetentionInDays: 14
 
+  CocktailTasteApiAccessLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 14
+
 Outputs:
   HttpApiId:
-    Description: HTTP API identifier. The endpoint requires the configured authorizer.
+    Description: HTTP API identifier. The Lambda integration rejects requests without a valid body HMAC.
     Value: !Ref CocktailTasteHttpApi

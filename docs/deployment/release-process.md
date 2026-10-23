@@ -1,8 +1,8 @@
 # Release Process
 
 Status: Proposed  
-Version: 0.1  
-Phase: 5 / P5-01  
+Version: 0.2
+Phase: 5 / P5-04
 Last Updated: 2026-10-22
 
 ## 1. Current CI baseline
@@ -76,3 +76,20 @@ Every release records the previous/current image digest, Compose/config version,
 - OIDC + SSM Run Command versus restricted SSH bootstrap.
 - Whether migration and deployment share a role or use separate least-privilege roles.
 - Manual production approval and rollback owner.
+
+## 9. Serverless release candidate flow
+
+The preferred serverless path supersedes the EC2 flow only when its deployment decisions are approved; the EC2 procedure above remains an alternative.
+
+1. Require the existing PR CI gate and protected production-environment approval.
+2. Build the Node.js 22 ZIP with `pnpm.cmd package:lambda`; record commit SHA, ZIP checksum, compressed size, and uncompressed size.
+3. Run `sam validate` and review the transformed change set without executing it.
+4. Back up the database and run explicit migration from an approved one-shot environment. Never migrate or seed during Lambda cold start.
+5. Configure the Lambda current HMAC secret and, only during rotation, its previous secret. Configure Vercel with the matching current secret. Do not print parameter values.
+6. Deploy Lambda/API Gateway only after change-set and estimated-cost approval.
+7. Verify signed liveness, readiness, invalid-signature rejection, valid recommendation, throttling, and sanitized logs.
+8. Switch Vercel `API_BASE_URL`, then run the public same-origin smoke test.
+9. For rotation, remove `API_HMAC_PREVIOUS_SECRET` after the five-minute acceptance window and deployment propagation time.
+10. Record CloudWatch usage, API Gateway requests, Lambda duration/errors/throttles, and actual cost against the estimate.
+
+Application rollback restores the prior ZIP/version only when schema-compatible. Authentication rollback may temporarily restore the previous secret as current, but must remain time-bounded and audited. Migration rollback remains manual and evidence-preserving as described above.
