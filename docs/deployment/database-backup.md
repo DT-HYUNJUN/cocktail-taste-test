@@ -1,8 +1,8 @@
 # PostgreSQL Backup Policy
 
-Status: Implemented Locally / Storage Decision Required
-Version: 0.1
-Phase: 5 / P5-05
+Status: Encryption Enforced Locally / Storage Decision Required
+Version: 0.2
+Phase: 5 / P5-06A
 Last Updated: 2026-10-23
 
 ## 1. Logical backup format
@@ -26,7 +26,7 @@ BACKUP_DATABASE_NAME
 BACKUP_DATABASE_SSL_MODE=verify-full
 ```
 
-The script writes under ignored `.backups/` and creates a SHA-256 sidecar. It supports client-side `age` encryption through `BACKUP_AGE_RECIPIENT`; production execution must use `-RequireEncryption`. No production password or recipient is committed.
+The script writes under ignored `.backups/` and creates a SHA-256 sidecar. The repository command always supplies `-RequireEncryption`, so `BACKUP_AGE_RECIPIENT` and the `age` executable are mandatory and no plaintext artifact survives a failed production backup. No production password, private key, or recipient is committed.
 
 ## 2. Encryption and storage
 
@@ -59,15 +59,11 @@ The exact Seoul-region amount is **Estimate / Pending** until an AWS Pricing Cal
 
 ## 4. Local verification record
 
-On 2026-10-23, `verify-local-backup-restore.ps1` created a PostgreSQL custom-format dump from an isolated local database, calculated SHA-256, restored it into `cocktail_taste_restore_test`, compared source/restored row state and migration history, and removed the restore database.
+On 2026-10-23, `verify-local-backup-restore.ps1` created a PostgreSQL custom-format dump from local Docker PostgreSQL, calculated SHA-256, restored it into `cocktail_taste_restore_test`, compared source/restored counts, activation state, stable IDs, all recommendation-relevant fields, required text validity, and migration history, and removed the restore database.
 
-Verified result:
+The current run result is recorded in `aws-deployment-readiness.md`; it depends on the local database contents at verification time.
 
-```text
-Cocktails total:active = 12:1
-Migration rows = 1
-Isolated restore verification passed
-```
+P5-06A result: 12 rows, 0 active, 12 distinct stable IDs, zero blank required ID/name fields, matching recommendation-field digest, and one migration row. The isolated restore database was removed after verification.
 
 The retained local artifact is ignored by Git and contains development-only data. This local test did not verify client-side encryption, S3 upload, lifecycle deletion, or Neon direct endpoint access.
 

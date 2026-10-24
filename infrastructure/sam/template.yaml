@@ -15,6 +15,7 @@ Parameters:
     Description: Optional previous HMAC secret for a bounded rotation overlap.
   DatabaseHost:
     Type: String
+    Description: Neon pooled endpoint hostname for Lambda runtime. Do not include a protocol or credentials.
   DatabasePort:
     Type: Number
     Default: 5432
@@ -26,6 +27,12 @@ Parameters:
     NoEcho: true
   DatabaseName:
     Type: String
+  LambdaReservedConcurrency:
+    Type: Number
+    Default: 2
+    MinValue: 1
+    MaxValue: 10
+    Description: Cost and database connection guard. Confirm the account concurrency quota before deployment.
 
 Globals:
   Function:
@@ -34,7 +41,6 @@ Globals:
       - arm64
     MemorySize: 512
     Timeout: 15
-    Tracing: Active
     Environment:
       Variables:
         NODE_ENV: production
@@ -71,7 +77,7 @@ Resources:
       FunctionName: cocktail-taste-api
       CodeUri: ../../.lambda/package/
       Handler: index.handler
-      ReservedConcurrentExecutions: 2
+      ReservedConcurrentExecutions: !Ref LambdaReservedConcurrency
       Events:
         Root:
           Type: HttpApi
@@ -103,3 +109,6 @@ Outputs:
   HttpApiId:
     Description: HTTP API identifier. The Lambda integration rejects requests without a valid body HMAC.
     Value: !Ref CocktailTasteHttpApi
+  HttpApiUrl:
+    Description: Invoke origin for Vercel API_BASE_URL. Requests still require a valid body HMAC.
+    Value: !Sub https://${CocktailTasteHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/prod

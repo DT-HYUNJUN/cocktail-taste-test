@@ -1,8 +1,8 @@
 # Neon PostgreSQL Integration
 
-Status: Implemented Locally / Neon Validation Pending
-Version: 0.1
-Phase: 5 / P5-05
+Status: Deployment Ready Locally / Neon Validation Pending
+Version: 0.2
+Phase: 5 / P5-06A
 Last Updated: 2026-10-23
 
 ## 1. Decision
@@ -104,3 +104,9 @@ Use distinct credentials where Neon role management permits:
 - backup role: `CONNECT` and read access needed by `pg_dump`.
 
 Do not place connection strings in browser variables, GitHub output, shell history, command arguments, or committed files.
+
+## 8. Provisioning acceptance gate
+
+Before Lambda receives traffic, verify both endpoint hostnames and role grants against the actual project, run migration twice, run Seed twice, confirm the second Seed inserts zero rows, and restore one encrypted dump into a separate branch/database. A failed TLS, migration, Seed, backup, or restore check stops deployment. Production is never overwritten directly.
+
+The Free plan remains the selected budget assumption at USD 0. Exceeding compute, storage, transfer, or project policy is not assumed to auto-upgrade safely; monitor Neon usage and treat exhaustion behavior as Pending until verified in the created account.

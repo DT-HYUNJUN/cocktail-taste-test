@@ -13,6 +13,7 @@ if ($outputRoot -ne $allowedRoot) {
 
 $packageDirectory = Join-Path $outputRoot "package"
 $zipPath = Join-Path $outputRoot "cocktail-taste-api.zip"
+$checksumPath = "$zipPath.sha256"
 $existingWorkspaceLink = Join-Path $packageDirectory "node_modules/cocktail-taste-test"
 
 if (Test-Path -LiteralPath $existingWorkspaceLink) {
@@ -28,6 +29,10 @@ if (Test-Path -LiteralPath $packageDirectory) {
 
 if (Test-Path -LiteralPath $zipPath) {
   Remove-Item -LiteralPath $zipPath -Force
+}
+
+if (Test-Path -LiteralPath $checksumPath) {
+  Remove-Item -LiteralPath $checksumPath -Force
 }
 
 New-Item -ItemType Directory -Path $outputRoot -Force | Out-Null
@@ -84,7 +89,14 @@ try {
 
 $zip = Get-Item -LiteralPath $zipPath
 $uncompressedBytes = (Get-ChildItem -LiteralPath $packageDirectory -Recurse -File | Measure-Object -Property Length -Sum).Sum
+$hash = Get-FileHash -LiteralPath $zipPath -Algorithm SHA256
+[System.IO.File]::WriteAllText(
+  $checksumPath,
+  "$($hash.Hash.ToLowerInvariant())  $($zip.Name)`n"
+)
 
 Write-Output "Lambda package: $($zip.FullName)"
 Write-Output "Compressed bytes: $($zip.Length)"
 Write-Output "Uncompressed bytes: $uncompressedBytes"
+Write-Output "SHA-256: $($hash.Hash.ToLowerInvariant())"
+Write-Output "Checksum file: $checksumPath"

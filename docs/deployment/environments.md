@@ -1,8 +1,8 @@
 # Deployment Environments and Operations
 
-Status: Implemented Locally / Production Pending
-Version: 0.2
-Phase: 5 / P5-05
+Status: Deployment Ready Locally / Production Pending
+Version: 0.3
+Phase: 5 / P5-06A
 Last Updated: 2026-10-23
 
 ## 1. Environment model
@@ -68,4 +68,10 @@ If the budget owner selects scenario B, automation starts the instance only for 
 - Backup frequency, retention, RPO, and RTO.
 - Whether Vercel production remains free under the user's actual plan/usage; Vercel cost is outside the AWS estimate.
 - Backup destination and client-side encryption recipient/key custody.
+
+## 8. Production readiness boundary
+
+The proposed production region pair is AWS Seoul (`ap-northeast-2`) and Neon Singapore (`aws-ap-southeast-1`). AWS CLI/SAM commands must always specify Seoul explicitly. Neon region selection is immutable for the project and must be approved before creation.
+
+The SAM template's `NoEcho` parameters are a validation-compatible draft, not approval to paste production secrets into a command. Select Parameter Store Standard `SecureString` or Secrets Manager in P5-06B, configure Vercel variables only in its server environment, and keep pooled runtime and direct maintenance credentials separate. See `aws-deployment-readiness.md` for the approval boundaries.
 

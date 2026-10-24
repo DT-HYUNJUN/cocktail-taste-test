@@ -1,9 +1,9 @@
 # AWS Monthly Cost Estimate
 
-Status: Proposed  
-Version: 0.1  
-Phase: 5 / P5-01  
-Last Updated: 2026-10-22
+Status: Serverless Candidate Budget-Approved / Live Billing Pending
+Version: 0.2
+Phase: 5 / P5-06A
+Last Updated: 2026-10-23
 
 ## 1. Evaluation basis
 
@@ -76,4 +76,26 @@ New customers currently receive $100 at sign-up and may earn up to $100 more. Th
 - Raise the budget, accept scheduled non-production availability, or change the database/hosting constraint.
 - Re-run AWS Pricing Calculator with account tax address and current USD/KRW rate immediately before approval.
 - Decide whether stable DNS uses an existing external provider or adds Route 53/domain cost.
+
+## 8. Serverless deployment estimate
+
+The current preferred architecture is Lambda + HTTP API + Neon Free, not the EC2 baseline above. Assumptions: 512 MB Lambda, two seconds per recommendation (1 GB-second), 20 KB request/response transfer, 2 KB logs/request, 14-day retention, 70 MB steady S3 backup storage, 30 PUT and one GET monthly, USD 1 = KRW 1,450, and 10% VAT. AWS credits and time-limited new-account promotions are excluded; always-free service allowances are shown separately.
+
+| Monthly recommendations | Lambda after monthly free allowance | HTTP API estimate | Logs/transfer | S3 backup estimate | Neon Free | Total incl. VAT |
+|---:|---:|---:|---:|---:|---:|---:|
+| 100 | $0.00 | $0.0001 | $0.00 within allowance | < $0.01 | $0.00 | < KRW 17 |
+| 1,000 | $0.00 | $0.001 | $0.00 within allowance | < $0.01 | $0.00 | < KRW 18 |
+| 10,000 | $0.00 | $0.01 | $0.00 within allowance | < $0.01 | $0.00 | < KRW 32 |
+
+If Lambda's account-wide free allowance is already exhausted, conservative x86-reference compute plus requests adds approximately $0.001687, $0.016867, and $0.168667 respectively; arm64 is expected to be lower, but the exact Seoul dynamic price is **Estimate / Pending Calculator confirmation**. HTTP API uses the public $1/million first-tier reference and also requires Seoul confirmation. CloudWatch's published free tier includes 5 GB logs, and AWS advertises 100 GB aggregate internet egress free; both are account-wide assumptions, not guarantees for this project.
+
+Secret choice changes fixed cost materially:
+
+- SSM Parameter Store Standard `SecureString` with an AWS-managed KMS key: no additional parameter/key storage charge; manual rotation and redeployment are required.
+- Secrets Manager: approximately $0.40/secret-month plus API calls. Two secrets are about $0.80, or KRW 1,276 including VAT, before calls; still within budget but requires approval.
+- Customer-managed KMS key: approximately $1/key-month plus requests, so it is not the initial budget choice.
+
+At the stated traffic and free-plan assumptions, serverless operation is comfortably below KRW 10,000/month. This is not a hard cap: abuse, retries, logs, other account workloads, Free-plan policy changes, or paid secret/KMS choices can increase it. AWS Budgets at 50/80/100 percent and Cost Anomaly Detection are alerts, not automatic spending stops.
+
+Official inputs were checked 2026-10-23: [Lambda](https://aws.amazon.com/lambda/pricing/), [API Gateway](https://aws.amazon.com/api-gateway/pricing/), [CloudWatch](https://aws.amazon.com/cloudwatch/pricing/), [S3](https://aws.amazon.com/s3/pricing/), [Parameter Store](https://aws.amazon.com/systems-manager/pricing/), and [Neon](https://neon.com/pricing).
 

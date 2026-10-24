@@ -1,8 +1,8 @@
 # PostgreSQL Restore Procedure
 
 Status: Verified Locally / Neon Validation Pending
-Version: 0.1
-Phase: 5 / P5-05
+Version: 0.2
+Phase: 5 / P5-06A
 Last Updated: 2026-10-23
 
 ## 1. Safety rule
@@ -51,6 +51,7 @@ Minimum SQL-level checks:
 - Drop only the confirmed isolated failed target.
 - Attempt the previous verified backup in a new isolated target.
 - If every retained generation fails, freeze deployment/data-changing work and escalate recovery ownership.
+- Any restore verification failure is a deployment stop condition. Never cut the production connection string over to the failed target.
 
 ## 5. Pending production proof
 
