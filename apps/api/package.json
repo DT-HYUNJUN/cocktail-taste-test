@@ -28,6 +28,7 @@
     "test:e2e": "vitest run --config vitest.e2e.config.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-ssm": "^3.1156.0",
     "@cocktail-taste-test/contracts": "workspace:*",
     "@cocktail-taste-test/domain": "workspace:*",
     "@codegenie/serverless-express": "4.17.1",

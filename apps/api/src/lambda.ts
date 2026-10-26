@@ -1,3 +1,4 @@
+import { loadRuntimeSecrets } from './secrets/load-runtime-secrets';
 import serverlessExpress from '@codegenie/serverless-express';
 import type {
   APIGatewayProxyEventV2,
@@ -29,9 +30,13 @@ export type LambdaRuntimeBootstrap = () => Promise<LambdaRuntime>;
 
 function exceedsBodyLimit(event: APIGatewayProxyEventV2): boolean {
   const configured = Number(process.env.API_MAX_BODY_BYTES ?? 65536);
-  const limit = Number.isInteger(configured) && configured > 0 ? configured : 65536;
+  const limit =
+    Number.isInteger(configured) && configured > 0 ? configured : 65536;
   if (!event.body) return false;
-  return Buffer.byteLength(event.body, event.isBase64Encoded ? 'base64' : 'utf8') > limit;
+  return (
+    Buffer.byteLength(event.body, event.isBase64Encoded ? 'base64' : 'utf8') >
+    limit
+  );
 }
 
 export async function bootstrapLambdaRuntime(): Promise<LambdaRuntime> {
@@ -46,9 +51,9 @@ export async function bootstrapLambdaRuntime(): Promise<LambdaRuntime> {
       APIGatewayProxyEventV2,
       APIGatewayProxyResultV2
     >({
-        app: app.getHttpAdapter().getInstance(),
-        respondWithErrors: false,
-      });
+      app: app.getHttpAdapter().getInstance(),
+      respondWithErrors: false,
+    });
 
     return {
       invoke: async (event, context, callback) => {
@@ -85,11 +90,7 @@ export function createLambdaHandler(
     return runtimePromise;
   };
 
-  return async (
-    event: APIGatewayProxyEventV2,
-    context: Context,
-    callback,
-  ) => {
+  return async (event: APIGatewayProxyEventV2, context: Context, callback) => {
     if (exceedsBodyLimit(event)) {
       return {
         statusCode: 413,
@@ -97,6 +98,19 @@ export function createLambdaHandler(
         body: JSON.stringify({ message: 'Request body is too large' }),
       };
     }
+
+    try {
+      await loadRuntimeSecrets();
+    } catch {
+      return {
+        statusCode: 503,
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          message: 'Recommendation API is unavailable',
+        }),
+      };
+    }
+
     const authentication = verifySignedRequest(event);
     if (!authentication.authenticated) {
       return createAuthenticationErrorResponse(authentication.statusCode);

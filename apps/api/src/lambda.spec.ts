@@ -10,6 +10,17 @@ import {
   type LambdaRuntime,
   type LambdaRuntimeBootstrap,
 } from './lambda';
+import { loadRuntimeSecrets } from './secrets/load-runtime-secrets';
+
+vi.mock('./secrets/load-runtime-secrets', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('./secrets/load-runtime-secrets')>();
+
+  return {
+    ...actual,
+    loadRuntimeSecrets: vi.fn(actual.loadRuntimeSecrets),
+  };
+});
 
 const event: APIGatewayProxyEventV2 = {
   version: '2.0',
@@ -98,8 +109,12 @@ function createRuntime(): LambdaRuntime {
   };
 }
 
-function responseStatus(response: APIGatewayProxyResultV2 | void): number | undefined {
-  return response && typeof response !== 'string' ? response.statusCode : undefined;
+function responseStatus(
+  response: APIGatewayProxyResultV2 | void,
+): number | undefined {
+  return response && typeof response !== 'string'
+    ? response.statusCode
+    : undefined;
 }
 
 describe('Lambda handler lifecycle', () => {
@@ -113,7 +128,9 @@ describe('Lambda handler lifecycle', () => {
 
   it('reuses one initialization for sequential invocations', async () => {
     const runtime = createRuntime();
-    const bootstrap = vi.fn<LambdaRuntimeBootstrap>().mockResolvedValue(runtime);
+    const bootstrap = vi
+      .fn<LambdaRuntimeBootstrap>()
+      .mockResolvedValue(runtime);
     const handler = createLambdaHandler(bootstrap);
 
     await handler(event, context, vi.fn());
@@ -150,7 +167,9 @@ describe('Lambda handler lifecycle', () => {
       .mockResolvedValueOnce(runtime);
     const handler = createLambdaHandler(bootstrap);
 
-    expect(responseStatus(await handler(databaseEvent, context, vi.fn()))).toBe(503);
+    expect(responseStatus(await handler(databaseEvent, context, vi.fn()))).toBe(
+      503,
+    );
     await expect(handler(event, context, vi.fn())).resolves.toEqual(
       expectedResponse,
     );
@@ -165,7 +184,55 @@ describe('Lambda handler lifecycle', () => {
     );
     const handler = createLambdaHandler(async () => runtime);
 
-    expect(responseStatus(await handler(databaseEvent, context, vi.fn()))).toBe(503);
+    expect(responseStatus(await handler(databaseEvent, context, vi.fn()))).toBe(
+      503,
+    );
+    expect(runtime.invoke).not.toHaveBeenCalled();
+  });
+
+  it('rejects oversized request bodies before initialization', async () => {
+    const runtime = createRuntime();
+    const bootstrap = vi
+      .fn<LambdaRuntimeBootstrap>()
+      .mockResolvedValue(runtime);
+    const handler = createLambdaHandler(bootstrap);
+
+    const oversizedEvent: APIGatewayProxyEventV2 = {
+      ...databaseEvent,
+      headers: { ...databaseEvent.headers },
+      body: 'x'.repeat(65537),
+      isBase64Encoded: false,
+    };
+
+    const response = await handler(oversizedEvent, context, vi.fn());
+
+    expect(responseStatus(response)).toBe(413);
+    expect(bootstrap).not.toHaveBeenCalled();
+    expect(runtime.ensureReady).not.toHaveBeenCalled();
+    expect(runtime.invoke).not.toHaveBeenCalled();
+  });
+
+  it('returns 503 without initializing runtime when secrets loading fails', async () => {
+    const runtime = createRuntime();
+    const bootstrap = vi
+      .fn<LambdaRuntimeBootstrap>()
+      .mockResolvedValue(runtime);
+    const handler = createLambdaHandler(bootstrap);
+
+    vi.mocked(loadRuntimeSecrets).mockRejectedValueOnce(
+      new Error('simulated SSM failure'),
+    );
+
+    const response = await handler(event, context, vi.fn());
+
+    expect(responseStatus(response)).toBe(503);
+    expect(response).toMatchObject({
+      body: JSON.stringify({
+        message: 'Recommendation API is unavailable',
+      }),
+    });
+    expect(bootstrap).not.toHaveBeenCalled();
+    expect(runtime.ensureReady).not.toHaveBeenCalled();
     expect(runtime.invoke).not.toHaveBeenCalled();
   });
 });
