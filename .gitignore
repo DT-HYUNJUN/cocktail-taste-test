@@ -5,5 +5,8 @@ dist/
 coverage/
 .env
 .env.local
+.env.compose
 playwright-report/
 test-results/
+.lambda/
+.backups/

@@ -36,11 +36,12 @@ export async function seedCocktails(
   await AppDataSource.initialize();
 
   try {
-    await AppDataSource.transaction(async (manager) => {
+    return await AppDataSource.transaction(async (manager) => {
       const repository = manager.getRepository(CocktailEntity);
+      let inserted = 0;
 
       for (const seed of seeds) {
-        await repository
+        const result = await repository
           .createQueryBuilder()
           .insert()
           .into(CocktailEntity)
@@ -49,12 +50,13 @@ export async function seedCocktails(
             isActive: false,
           })
           .orIgnore()
+          .returning(['id'])
           .execute();
+        inserted += Array.isArray(result.raw) ? result.raw.length : 0;
       }
-    });
 
-    // 입력 Seed 처리 건수이며 실제 신규 INSERT 건수는 아니다.
-    return seeds.length;
+      return inserted;
+    });
   } finally {
     await AppDataSource.destroy();
   }
@@ -62,10 +64,16 @@ export async function seedCocktails(
 
 async function main() {
   const count = await seedCocktails(cocktailSeeds);
-  console.log(`Seed processed: ${count} cocktails`);
+  console.log(`Seed inserted: ${count} cocktails`);
 }
 
-if (process.argv[1]?.replaceAll('\\', '/').endsWith('/seed-cocktails.ts')) {
+export function isSeedCliEntry(entryPath: string | undefined): boolean {
+  return /\/seed-cocktails\.[cm]?[jt]s$/.test(
+    entryPath?.replaceAll('\\', '/') ?? '',
+  );
+}
+
+if (isSeedCliEntry(process.argv[1])) {
   main().catch((error: unknown) => {
     console.error(error);
     process.exitCode = 1;

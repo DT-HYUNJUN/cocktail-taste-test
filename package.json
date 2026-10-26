@@ -15,6 +15,9 @@
     "test:integration": "pnpm --filter api test:integration && pnpm --filter api test:e2e",
     "test:e2e:web": "pnpm --filter web test:e2e",
     "test:architecture": "tsx scripts/check-architecture.ts",
+    "package:lambda": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-lambda.ps1",
+    "db:backup": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/database/backup-postgres.ps1 -RequireEncryption",
+    "db:verify-restore": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/database/verify-local-backup-restore.ps1",
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm test:architecture && pnpm build"
   },
   "devDependencies": {

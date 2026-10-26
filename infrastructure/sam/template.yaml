@@ -1,0 +1,113 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Draft only - Cocktail Taste Test NestJS API on Lambda. Do not deploy before security approval.
+
+Parameters:
+  ApiHmacSecretParameterName:
+    Type: String
+    Default: /cocktail-taste/prod/api-hmac-secret
+    AllowedPattern: "^/cocktail-taste/prod/[a-zA-Z0-9_.-]+$"
+    Description: Name of the SSM SecureString parameter containing the HMAC secret.
+  DatabasePasswordParameterName:
+    Type: String
+    Default: /cocktail-taste/prod/database-password
+    AllowedPattern: "^/cocktail-taste/prod/[a-zA-Z0-9_.-]+$"
+    Description: Name of the SSM SecureString parameter containing the Neon database password.
+  DatabaseHost:
+    Type: String
+    Description: Neon pooled endpoint hostname for Lambda runtime. Do not include a protocol or credentials.
+  DatabasePort:
+    Type: Number
+    Default: 5432
+  DatabaseUser:
+    Type: String
+    NoEcho: true
+  DatabaseName:
+    Type: String
+
+Globals:
+  Function:
+    Runtime: nodejs22.x
+    Architectures:
+      - arm64
+    MemorySize: 512
+    Timeout: 15
+    Environment:
+      Variables:
+        NODE_ENV: production
+        DATABASE_HOST: !Ref DatabaseHost
+        DATABASE_PORT: !Ref DatabasePort
+        DATABASE_USER: !Ref DatabaseUser
+        DATABASE_NAME: !Ref DatabaseName
+        DATABASE_SSL_MODE: verify-full
+        DATABASE_POOL_MAX: 1
+        DATABASE_CONNECTION_TIMEOUT_MS: 5000
+        DATABASE_IDLE_TIMEOUT_MS: 30000
+        DATABASE_PASSWORD_PARAMETER_NAME: !Ref DatabasePasswordParameterName
+        API_HMAC_SECRET_PARAMETER_NAME: !Ref ApiHmacSecretParameterName
+        API_HMAC_MAX_AGE_MS: 300000
+        API_MAX_BODY_BYTES: 65536
+
+Resources:
+  CocktailTasteHttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: prod
+      FailOnWarnings: true
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 10
+        ThrottlingRateLimit: 5
+      AccessLogSettings:
+        DestinationArn: !GetAtt CocktailTasteApiAccessLogGroup.Arn
+        Format: '{"requestId":"$context.requestId","routeKey":"$context.routeKey","status":"$context.status","responseLength":"$context.responseLength"}'
+
+  CocktailTasteApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: cocktail-taste-api
+      CodeUri: ../../.lambda/package/
+      Handler: index.handler
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Sid: ReadRuntimeSecrets
+              Effect: Allow
+              Action:
+                - ssm:GetParameters
+              Resource:
+                - !Sub "arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${ApiHmacSecretParameterName}"
+                - !Sub "arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${DatabasePasswordParameterName}"
+      Events:
+        Root:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CocktailTasteHttpApi
+            Path: /
+            Method: ANY
+            PayloadFormatVersion: "2.0"
+        Proxy:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CocktailTasteHttpApi
+            Path: /{proxy+}
+            Method: ANY
+            PayloadFormatVersion: "2.0"
+
+  CocktailTasteApiLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/cocktail-taste-api
+      RetentionInDays: 14
+
+  CocktailTasteApiAccessLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 14
+
+Outputs:
+  HttpApiId:
+    Description: HTTP API identifier. The Lambda integration rejects requests without a valid body HMAC.
+    Value: !Ref CocktailTasteHttpApi
+  HttpApiUrl:
+    Description: Invoke origin for Vercel API_BASE_URL. Requests still require a valid body HMAC.
+    Value: !Sub https://${CocktailTasteHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/prod
