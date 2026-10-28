@@ -36,7 +36,11 @@ describe("createRecommendation", () => {
   it("maps network and HTTP failures to user-safe errors", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("secret network detail")));
     await expect(createRecommendation({ answers: [] })).rejects.toBeInstanceOf(RecommendationRequestError);
+
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ message: "bad" }), { status: 400 })));
-    await expect(createRecommendation({ answers: [] })).rejects.toThrow("추천을 불러오지 못했습니다");
+    await expect(createRecommendation({ answers: [] })).rejects.toThrow("답변이 올바르지 않습니다");
+
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ message: "unavailable" }), { status: 503 })));
+    await expect(createRecommendation({ answers: [] })).rejects.toThrow("추천 서버에 일시적인 문제가 발생했습니다");
   });
 });
