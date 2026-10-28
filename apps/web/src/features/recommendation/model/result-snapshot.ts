@@ -28,10 +28,13 @@ export function saveRecommendationResult(value: unknown): RecommendationResponse
 
   memoryResult = result;
   try {
-    getSessionStorage()?.setItem(RECOMMENDATION_RESULT_STORAGE_KEY, JSON.stringify({
-      version: RECOMMENDATION_RESULT_SCHEMA_VERSION,
-      result,
-    } satisfies ResultSnapshot));
+    getSessionStorage()?.setItem(
+      RECOMMENDATION_RESULT_STORAGE_KEY,
+      JSON.stringify({
+        version: RECOMMENDATION_RESULT_SCHEMA_VERSION,
+        result,
+      } satisfies ResultSnapshot),
+    );
   } catch {
     // The in-memory snapshot keeps client navigation usable when storage is blocked.
   }
@@ -56,7 +59,11 @@ export function loadRecommendationResult(): RecommendationResponse | null {
     memoryResult = result;
     return result;
   } catch {
-    try { getSessionStorage()?.removeItem(RECOMMENDATION_RESULT_STORAGE_KEY); } catch { /* no-op */ }
+    try {
+      getSessionStorage()?.removeItem(RECOMMENDATION_RESULT_STORAGE_KEY);
+    } catch {
+      /* no-op */
+    }
     memoryResult = null;
     return null;
   }
@@ -64,5 +71,9 @@ export function loadRecommendationResult(): RecommendationResponse | null {
 
 export function clearRecommendationResult(): void {
   memoryResult = null;
-  try { getSessionStorage()?.removeItem(RECOMMENDATION_RESULT_STORAGE_KEY); } catch { /* no-op */ }
+  try {
+    getSessionStorage()?.removeItem(RECOMMENDATION_RESULT_STORAGE_KEY);
+  } catch {
+    /* no-op */
+  }
 }
