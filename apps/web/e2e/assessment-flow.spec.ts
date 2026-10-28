@@ -54,7 +54,7 @@ test("E2E-01 completes the full assessment and renders a recommendation", async 
   await startAssessment(page);
   await completeAssessment(page);
   await expect(page).toHaveURL(/\/result$/);
-  await expect(page.getByRole("heading", { name: "나의 취향 프로필" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "당신을 위한 한 잔을 찾았어요!" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Tom Collins" })).toBeVisible();
   await expect(page.getByText("선호하는 진 베이스 칵테일이에요")).toBeVisible();
 });
@@ -104,8 +104,8 @@ test("E2E-05 treats an empty recommendation response as a normal result", async 
   await mockRecommendation(page, (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ...successResponse, recommendations: [] }) }));
   await startAssessment(page);
   await completeAssessment(page);
-  await expect(page.getByRole("heading", { name: "나의 취향 프로필" })).toBeVisible();
-  await expect(page.getByText("현재 추천할 수 있는 칵테일이 없어요")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "취향 분석을 완료했어요!" })).toBeVisible();
+  await expect(page.getByText("아직 추천할 수 있는 칵테일이 없어요")).toBeVisible();
 });
 
 test("E2E-06 keeps answers and succeeds after an explicit retry", async ({ page }) => {
@@ -129,7 +129,7 @@ test("E2E-07 restarting clears assessment and result snapshots", async ({ page }
   await mockRecommendation(page);
   await startAssessment(page);
   await completeAssessment(page);
-  await page.getByRole("button", { name: "다시 테스트하기" }).click();
+  await page.getByRole("button", { name: "취향 테스트 다시 하기" }).click();
   await expect(page).toHaveURL(/\/test$/);
   await expect(page.getByLabel("질문 1 / 8")).toBeVisible();
   await expect(page.locator('input[type="radio"]:checked')).toHaveCount(0);
