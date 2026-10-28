@@ -3,8 +3,13 @@ import { describe, expect, it } from "vitest";
 import Home from "./page";
 
 describe("Home", () => {
-  it("renders the primary taste-test call to action", () => {
+  it("provides a link to start the taste test", () => {
     render(<Home />);
-    expect(screen.getByRole("link", { name: "테스트 시작하기" })).toBeVisible();
+
+    const testLinks = screen.getAllByRole("link").filter((link) => link.getAttribute("href") === "/test");
+
+    expect(testLinks.length).toBeGreaterThan(0);
+    expect(testLinks[0]).toBeVisible();
+    expect(testLinks[0]).toHaveAccessibleName();
   });
 });

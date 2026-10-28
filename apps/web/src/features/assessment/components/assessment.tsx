@@ -11,6 +11,7 @@ import { MultiChoiceQuestion } from "./multi-choice-question";
 import { QuestionHeader } from "./question-header";
 import { QuestionNavigation } from "./question-navigation";
 import { SingleChoiceQuestion } from "./single-choice-question";
+import { RecommendationLoading } from "../../recommendation/ui/recommendation-loading";
 
 export function Assessment() {
   const router = useRouter();
@@ -30,13 +31,19 @@ export function Assessment() {
   const answer = answers[question.id];
   const selections = Array.isArray(answer) ? answer : [];
 
-  useEffect(() => { void hydrateAssessmentStore(); }, []);
+  useEffect(() => {
+    void hydrateAssessmentStore();
+  }, []);
   useEffect(() => {
     if (hasHydrated && !recommendation.isSuccess) titleRef.current?.focus();
   }, [currentIndex, hasHydrated, recommendation.isSuccess]);
 
   if (!hasHydrated) {
-    return <section className="mx-auto flex min-h-screen w-full max-w-3xl items-center justify-center px-5" aria-busy="true" aria-live="polite">진행 상태를 불러오는 중입니다.</section>;
+    return (
+      <section className="mx-auto flex min-h-screen w-full max-w-3xl items-center justify-center px-5" aria-busy="true" aria-live="polite">
+        진행 상태를 불러오는 중입니다.
+      </section>
+    );
   }
 
   const submitAssessment = () => {
@@ -48,16 +55,19 @@ export function Assessment() {
       return;
     }
     clearRecommendationResult();
-    recommendation.mutate({ answers: serialized }, {
-      onSuccess: (result) => {
-        if (saveRecommendationResult(result) === null) {
-          setCompletionError("추천 결과를 안전하게 저장하지 못했습니다. 다시 시도해 주세요.");
-          recommendation.reset();
-          return;
-        }
-        router.push("/result");
+    recommendation.mutate(
+      { answers: serialized },
+      {
+        onSuccess: (result) => {
+          if (saveRecommendationResult(result) === null) {
+            setCompletionError("추천 결과를 안전하게 저장하지 못했습니다. 다시 시도해 주세요.");
+            recommendation.reset();
+            return;
+          }
+          router.push("/result");
+        },
       },
-    });
+    );
   };
 
   const continueAssessment = () => {
@@ -73,38 +83,73 @@ export function Assessment() {
     submitAssessment();
   };
 
-  if (recommendation.isSuccess) {
-    return <section className="mx-auto flex min-h-screen w-full max-w-3xl items-center justify-center px-5" aria-busy="true" aria-live="polite">결과 화면으로 이동하는 중입니다.</section>;
+  if (recommendation.isPending || recommendation.isSuccess) {
+    return <RecommendationLoading />;
   }
 
   const canContinue = question.kind === "multi" || typeof answer === "string";
-  const conflictingSelections = question.id === "preferred-flavors"
-    ? answers["avoided-flavors"]
-    : question.id === "avoided-flavors"
-      ? answers["preferred-flavors"]
-      : [];
+  const conflictingSelections = question.id === "preferred-flavors" ? answers["avoided-flavors"] : question.id === "avoided-flavors" ? answers["preferred-flavors"] : [];
 
   return (
-    <section className="mx-auto flex min-h-screen w-full max-w-3xl flex-col px-5 py-8 sm:px-8 sm:py-12" aria-labelledby="question-title">
+    <section className="mx-auto w-full max-w-3xl px-5 py-8 sm:px-8 sm:py-12" aria-labelledby="question-title">
       <QuestionHeader index={currentIndex} total={ASSESSMENT_QUESTIONS.length} title={question.title} titleRef={titleRef} />
-      <div className="flex-1">
+      <div>
         {question.kind === "single" ? (
-          <SingleChoiceQuestion question={question} answer={typeof answer === "string" ? answer : undefined} onChange={(value) => { setCompletionError(null); recommendation.reset(); selectSingle(question.id, value); }} />
+          <SingleChoiceQuestion
+            question={question}
+            answer={typeof answer === "string" ? answer : undefined}
+            onChange={(value) => {
+              setCompletionError(null);
+              recommendation.reset();
+              selectSingle(question.id, value);
+            }}
+          />
         ) : (
-          <MultiChoiceQuestion question={question} selections={selections} conflictingSelections={conflictingSelections ?? []} onToggle={(value) => { setCompletionError(null); recommendation.reset(); toggleMulti(question.id, value); }} />
+          <MultiChoiceQuestion
+            question={question}
+            selections={selections}
+            conflictingSelections={conflictingSelections ?? []}
+            onToggle={(value) => {
+              setCompletionError(null);
+              recommendation.reset();
+              toggleMulti(question.id, value);
+            }}
+          />
         )}
-        {completionError && <p className="mt-4 text-sm font-medium text-red-700" role="alert">{completionError}</p>}
+        {completionError && (
+          <p className="mt-4 text-sm font-medium text-red-700" role="alert">
+            {completionError}
+          </p>
+        )}
         {recommendation.isError && (
           <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4" role="alert">
             <p className="text-sm font-medium text-red-800">{recommendation.error.message}</p>
             <div className="mt-3 flex flex-wrap gap-3">
-              <button type="button" onClick={submitAssessment} className="rounded-lg bg-red-800 px-4 py-2 text-sm font-medium text-white">다시 시도</button>
-              <button type="button" onClick={() => { recommendation.reset(); returnToLastQuestion(); }} className="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-900">답변 수정하기</button>
+              <button type="button" onClick={submitAssessment} className="rounded-lg bg-red-800 px-4 py-2 text-sm font-medium text-white">
+                다시 시도
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  recommendation.reset();
+                  returnToLastQuestion();
+                }}
+                className="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-900"
+              >
+                답변 수정하기
+              </button>
             </div>
           </div>
         )}
       </div>
-      <QuestionNavigation isFirst={currentIndex === 0} isLast={currentIndex === ASSESSMENT_QUESTIONS.length - 1} canContinue={canContinue} isPending={recommendation.isPending} onPrevious={movePrevious} onContinue={continueAssessment} />
+      <QuestionNavigation
+        isFirst={currentIndex === 0}
+        isLast={currentIndex === ASSESSMENT_QUESTIONS.length - 1}
+        canContinue={canContinue}
+        isPending={recommendation.isPending}
+        onPrevious={movePrevious}
+        onContinue={continueAssessment}
+      />
     </section>
   );
 }
