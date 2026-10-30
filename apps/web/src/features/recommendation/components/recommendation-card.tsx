@@ -1,6 +1,7 @@
 import type { RecommendationItem } from "@cocktail-taste-test/contracts";
 import { DIMENSION_LABELS, FLAVOR_LABELS, SCORE_LABELS, SPIRIT_LABELS } from "./result-labels";
 import { RecommendationReasons } from "./recommendation-reasons";
+import { CocktailImage } from "../ui/cocktail-image";
 
 export function RecommendationCard({ item }: { item: RecommendationItem }) {
   const { cocktail } = item;
@@ -11,8 +12,7 @@ export function RecommendationCard({ item }: { item: RecommendationItem }) {
         {/* 칵테일 이미지 */}
         <div className="relative aspect-[4/5] bg-[#FFF0E6] md:aspect-auto md:min-h-[420px]">
           {cocktail.imageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={cocktail.imageUrl} alt={`${cocktail.name} 칵테일`} className="absolute inset-0 h-full w-full object-cover object-center" />
+            <CocktailImage imageUrl={cocktail.imageUrl} name={`${cocktail.name} 칵테일`} />
           ) : (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-4" role="img" aria-label={`${cocktail.name} 이미지 준비 중`}>
               <span aria-hidden="true" className="text-7xl">
