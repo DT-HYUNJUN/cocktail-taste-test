@@ -21,9 +21,22 @@ function createEvent(body = '{"answers":[]}'): APIGatewayProxyEventV2 {
       'x-cocktail-signature': signature,
     },
     requestContext: {
-      accountId: 'local', apiId: 'local', domainName: 'localhost', domainPrefix: 'local',
-      http: { method: 'POST', path: '/recommendations', protocol: 'HTTP/1.1', sourceIp: '127.0.0.1', userAgent: 'vitest' },
-      requestId: 'id', routeKey: 'POST /recommendations', stage: '$default', time: 'now', timeEpoch: now,
+      accountId: 'local',
+      apiId: 'local',
+      domainName: 'localhost',
+      domainPrefix: 'local',
+      http: {
+        method: 'POST',
+        path: '/recommendations',
+        protocol: 'HTTP/1.1',
+        sourceIp: '127.0.0.1',
+        userAgent: 'vitest',
+      },
+      requestId: 'id',
+      routeKey: 'POST /recommendations',
+      stage: '$default',
+      time: 'now',
+      timeEpoch: now,
     },
     body,
     isBase64Encoded: false,
@@ -35,28 +48,91 @@ describe('verifySignedRequest', () => {
 
   it('accepts a valid signature', () => {
     vi.stubEnv('API_HMAC_SECRET', secret);
-    expect(verifySignedRequest(createEvent(), now)).toEqual({ authenticated: true });
+    expect(verifySignedRequest(createEvent(), now)).toEqual({
+      authenticated: true,
+    });
   });
 
   it('rejects missing and invalid signatures', () => {
     vi.stubEnv('API_HMAC_SECRET', secret);
     const missing = createEvent();
     missing.headers = {};
-    expect(verifySignedRequest(missing, now)).toEqual({ authenticated: false, statusCode: 401 });
+    expect(verifySignedRequest(missing, now)).toEqual({
+      authenticated: false,
+      statusCode: 401,
+    });
     const invalid = createEvent();
     invalid.headers['x-cocktail-signature'] = 'invalid';
-    expect(verifySignedRequest(invalid, now)).toEqual({ authenticated: false, statusCode: 403 });
+    expect(verifySignedRequest(invalid, now)).toEqual({
+      authenticated: false,
+      statusCode: 403,
+    });
   });
 
   it('rejects expired timestamps and modified bodies', () => {
     vi.stubEnv('API_HMAC_SECRET', secret);
-    expect(verifySignedRequest(createEvent(), now + 300_001)).toEqual({ authenticated: false, statusCode: 401 });
+    expect(verifySignedRequest(createEvent(), now + 300_001)).toEqual({
+      authenticated: false,
+      statusCode: 401,
+    });
     const modified = createEvent();
     modified.body = '{"answers":["modified"]}';
-    expect(verifySignedRequest(modified, now)).toEqual({ authenticated: false, statusCode: 403 });
+    expect(verifySignedRequest(modified, now)).toEqual({
+      authenticated: false,
+      statusCode: 403,
+    });
   });
 
   it('fails closed without a configured secret', () => {
-    expect(verifySignedRequest(createEvent(), now)).toEqual({ authenticated: false, statusCode: 503 });
+    vi.stubEnv('API_HMAC_SECRET', '');
+
+    expect(verifySignedRequest(createEvent(), now)).toEqual({
+      authenticated: false,
+      statusCode: 503,
+    });
+  });
+
+  it('accepts a signature generated with the previous secret', () => {
+    const previousSecret = 'previous-secret-that-is-long-enough-for-tests';
+
+    vi.stubEnv('API_HMAC_SECRET', secret);
+    vi.stubEnv('API_HMAC_PREVIOUS_SECRET', previousSecret);
+
+    const event = createEvent();
+
+    event.headers['x-cocktail-signature'] = createHmac('sha256', previousSecret)
+      .update(
+        [
+          event.headers['x-cocktail-timestamp'],
+          'POST',
+          '/recommendations',
+          event.body,
+        ].join('\n'),
+      )
+      .digest('hex');
+
+    expect(verifySignedRequest(event, now)).toEqual({
+      authenticated: true,
+    });
+  });
+
+  it('rejects modified HTTP methods and paths', () => {
+    vi.stubEnv('API_HMAC_SECRET', secret);
+
+    const modifiedMethod = createEvent();
+    modifiedMethod.requestContext.http.method = 'GET';
+
+    expect(verifySignedRequest(modifiedMethod, now)).toEqual({
+      authenticated: false,
+      statusCode: 403,
+    });
+
+    const modifiedPath = createEvent();
+    modifiedPath.rawPath = '/health';
+
+    expect(verifySignedRequest(modifiedPath, now)).toEqual({
+      authenticated: false,
+      statusCode: 403,
+    });
   });
 });
