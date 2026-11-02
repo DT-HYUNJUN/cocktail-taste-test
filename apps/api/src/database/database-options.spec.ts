@@ -29,7 +29,9 @@ describe('createDatabaseConnectionOptions', () => {
     vi.stubEnv('DATABASE_SSL_MODE', 'require');
 
     const options = createDatabaseConnectionOptions();
-
+    expect(options.extra).toMatchObject({
+      enableChannelBinding: true,
+    });
     expect(options.poolSize).toBe(1);
     expect(options.ssl).toEqual({ rejectUnauthorized: false });
     expect(options.extra).toEqual(
@@ -41,8 +43,14 @@ describe('createDatabaseConnectionOptions', () => {
     setRequiredEnvironment();
     vi.stubEnv('AWS_LAMBDA_FUNCTION_NAME', 'cocktail-api');
 
-    expect(createDatabaseConnectionOptions().ssl).toEqual({
+    const options = createDatabaseConnectionOptions();
+
+    expect(options.ssl).toEqual({
       rejectUnauthorized: true,
+    });
+
+    expect(options.extra).toMatchObject({
+      enableChannelBinding: true,
     });
   });
 

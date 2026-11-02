@@ -48,7 +48,8 @@ function readSslOptions(
   purpose: DatabaseConnectionPurpose,
 ): DatabaseConnectionOptions['ssl'] {
   const productionDefault =
-    process.env.NODE_ENV === 'production' || process.env.AWS_LAMBDA_FUNCTION_NAME
+    process.env.NODE_ENV === 'production' ||
+    process.env.AWS_LAMBDA_FUNCTION_NAME
       ? 'verify-full'
       : 'disable';
   const mode =
@@ -84,8 +85,11 @@ export function createDatabaseConnectionOptions(
 
   for (const field of databaseFields) {
     if (!values[field]) {
-      const prefix = purpose === 'maintenance' ? 'MIGRATION_DATABASE' : 'DATABASE';
-      throw new Error(`Missing database environment variable: ${prefix}_${field}`);
+      const prefix =
+        purpose === 'maintenance' ? 'MIGRATION_DATABASE' : 'DATABASE';
+      throw new Error(
+        `Missing database environment variable: ${prefix}_${field}`,
+      );
     }
   }
 
@@ -128,6 +132,7 @@ export function createDatabaseConnectionOptions(
       max: poolSize,
       connectionTimeoutMillis,
       idleTimeoutMillis,
+      enableChannelBinding: true,
     },
   };
 }

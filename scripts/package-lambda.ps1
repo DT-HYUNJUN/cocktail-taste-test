@@ -73,15 +73,32 @@ try {
     Remove-Item -LiteralPath $temporaryDependencyRoot -Recurse -Force
   }
 
-  $tar = Get-Command tar -ErrorAction SilentlyContinue
-  if ($tar) {
-    & $tar.Source -a -cf $zipPath -C $packageDirectory .
-    if ($LASTEXITCODE -ne 0) {
-      throw "ZIP creation failed with exit code $LASTEXITCODE"
-    }
-  } else {
-    Compress-Archive -Path (Join-Path $packageDirectory "*") -DestinationPath $zipPath -CompressionLevel Optimal
+  Add-Type -AssemblyName System.IO.Compression
+  Add-Type -AssemblyName System.IO.Compression.FileSystem
+
+  $archive = [System.IO.Compression.ZipFile]::Open(
+    $zipPath,
+    [System.IO.Compression.ZipArchiveMode]::Create
+  )
+
+  try {
+    Get-ChildItem -LiteralPath $packageDirectory -Recurse -File -Force |
+      ForEach-Object {
+        $relativePath = $_.FullName.Substring($packageDirectory.Length + 1)
+        $entryName = $relativePath.Replace("\", "/")
+
+        [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
+          $archive,
+          $_.FullName,
+          $entryName,
+          [System.IO.Compression.CompressionLevel]::Optimal
+        ) | Out-Null
+      }
   }
+  finally {
+    $archive.Dispose()
+  }
+
 } finally {
   $env:CI = $previousCi
   Pop-Location
