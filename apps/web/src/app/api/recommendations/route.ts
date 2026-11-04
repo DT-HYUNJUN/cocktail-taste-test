@@ -1,5 +1,6 @@
 import { createHmac } from "node:crypto";
 import { NextResponse } from "next/server";
+import { reportRecommendationError } from "@/shared/lib/sentry/report-recommendation-error";
 
 const RETRYABLE_STATUS_CODES = new Set([502, 503, 504]);
 const DEFAULT_TIMEOUT_MS = 12_000;
@@ -38,6 +39,8 @@ export async function POST(request: Request) {
   const secret = process.env.API_HMAC_SECRET?.trim();
 
   if (!apiBaseUrl || !secret || secret.length < 32) {
+    await reportRecommendationError("configuration");
+
     return NextResponse.json({ message: "Recommendation API is not configured" }, { status: 503 });
   }
 
@@ -49,7 +52,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Invalid JSON request" }, { status: 400 });
   }
 
-  // 여기부터 수정
   let url: URL;
 
   try {
@@ -61,9 +63,10 @@ export async function POST(request: Request) {
 
     url = new URL("recommendations", apiBaseUrl.endsWith("/") ? apiBaseUrl : `${apiBaseUrl}/`);
   } catch {
+    await reportRecommendationError("configuration");
+
     return NextResponse.json({ message: "Recommendation API is not configured" }, { status: 503 });
   }
-  // 여기까지 수정
 
   let lastTimestamp = 0;
 
@@ -71,13 +74,25 @@ export async function POST(request: Request) {
     lastTimestamp = Math.max(Date.now(), lastTimestamp + 1);
     try {
       const response = await callRecommendationApi(url, secret, body, lastTimestamp);
+
       if (!RETRYABLE_STATUS_CODES.has(response.status) || attempt === 1) {
-        const responseBody: unknown = await response.json().catch(() => ({ message: "Invalid API response" }));
+        if (RETRYABLE_STATUS_CODES.has(response.status)) {
+          await reportRecommendationError("upstream-response");
+        }
+
+        const responseBody: unknown = await response.json().catch(() => ({
+          message: "Invalid API response",
+        }));
+
         return NextResponse.json(responseBody, { status: response.status });
       }
     } catch (error) {
       if (attempt === 0) continue;
+
       const timedOut = typeof error === "object" && error !== null && "name" in error && error.name === "TimeoutError";
+
+      await reportRecommendationError(timedOut ? "timeout" : "upstream");
+
       return NextResponse.json(
         {
           message: timedOut ? "Recommendation API timed out" : "Recommendation API is unavailable",
