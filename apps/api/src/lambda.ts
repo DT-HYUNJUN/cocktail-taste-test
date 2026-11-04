@@ -1,3 +1,5 @@
+import './instrument';
+import { reportLambdaError } from './sentry/report-lambda-error';
 import { loadRuntimeSecrets } from './secrets/load-runtime-secrets';
 import serverlessExpress from '@codegenie/serverless-express';
 import type {
@@ -101,7 +103,9 @@ export function createLambdaHandler(
 
     try {
       await loadRuntimeSecrets();
-    } catch {
+    } catch (error) {
+      await reportLambdaError(error, 'secrets');
+
       return {
         statusCode: 503,
         headers: { 'content-type': 'application/json' },
@@ -122,7 +126,9 @@ export function createLambdaHandler(
         await runtime.ensureReady();
       }
       return await runtime.invoke(event, context, callback);
-    } catch {
+    } catch (error) {
+      await reportLambdaError(error, 'secrets');
+
       return {
         statusCode: 503,
         headers: { 'content-type': 'application/json' },
