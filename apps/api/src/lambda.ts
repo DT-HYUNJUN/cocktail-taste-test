@@ -127,7 +127,7 @@ export function createLambdaHandler(
       }
       return await runtime.invoke(event, context, callback);
     } catch (error) {
-      await reportLambdaError(error, 'secrets');
+      await reportLambdaError(error, 'runtime');
 
       return {
         statusCode: 503,
