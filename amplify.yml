@@ -10,6 +10,7 @@ applications:
             - pnpm install --frozen-lockfile
         build:
           commands:
+            - pnpm --filter '@cocktail-taste-test/contracts' build
             - pnpm --filter web build
       artifacts:
         baseDirectory: apps/web/.next
