@@ -9,7 +9,10 @@ export type RequestAuthenticationResult =
   | { authenticated: true }
   | { authenticated: false; statusCode: 401 | 403 | 503 };
 
-function getHeader(event: APIGatewayProxyEventV2, name: string): string | undefined {
+function getHeader(
+  event: APIGatewayProxyEventV2,
+  name: string,
+): string | undefined {
   const entry = Object.entries(event.headers).find(
     ([headerName]) => headerName.toLowerCase() === name,
   );
@@ -25,7 +28,10 @@ function getRawBody(event: APIGatewayProxyEventV2): string {
     : event.body;
 }
 
-function createPayload(event: APIGatewayProxyEventV2, timestamp: string): string {
+function createPayload(
+  event: APIGatewayProxyEventV2,
+  timestamp: string,
+): string {
   return [
     timestamp,
     event.requestContext.http.method.toUpperCase(),
@@ -97,9 +103,7 @@ export function verifySignedRequest(
   return { authenticated: true };
 }
 
-export function createAuthenticationErrorResponse(
-  statusCode: 401 | 403 | 503,
-) {
+export function createAuthenticationErrorResponse(statusCode: 401 | 403 | 503) {
   const message =
     statusCode === 503
       ? 'Recommendation API is not configured'

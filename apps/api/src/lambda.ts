@@ -59,7 +59,25 @@ export async function bootstrapLambdaRuntime(): Promise<LambdaRuntime> {
 
     return {
       invoke: async (event, context, callback) => {
-        const response = await expressHandler(event, context, callback);
+        const normalizedEvent = {
+          ...event,
+          rawPath: event.rawPath.replace(/^\/prod(?=\/|$)/, '') || '/',
+          requestContext: {
+            ...event.requestContext,
+            http: {
+              ...event.requestContext.http,
+              path:
+                event.requestContext.http.path.replace(/^\/prod(?=\/|$)/, '') ||
+                '/',
+            },
+          },
+        };
+
+        const response = await expressHandler(
+          normalizedEvent,
+          context,
+          callback,
+        );
         if (response === undefined) {
           throw new Error('Lambda adapter returned no HTTP response');
         }
