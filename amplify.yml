@@ -1,0 +1,21 @@
+version: 1
+applications:
+  - appRoot: apps/web
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - corepack enable
+            - corepack prepare pnpm@11.0.9 --activate
+            - pnpm install --frozen-lockfile
+        build:
+          commands:
+            - pnpm --filter web build
+      artifacts:
+        baseDirectory: apps/web/.next
+        files:
+          - "**/*"
+      cache:
+        paths:
+          - node_modules/.cache/**/*
+          - apps/web/.next/cache/**/*

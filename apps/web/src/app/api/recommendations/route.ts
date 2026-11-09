@@ -15,8 +15,8 @@ function readTimeoutMs(): number {
   return value;
 }
 
-function signRequest(secret: string, timestamp: string, body: string): string {
-  return createHmac("sha256", secret).update([timestamp, "POST", "/recommendations", body].join("\n")).digest("hex");
+function signRequest(secret: string, timestamp: string, path: string, body: string): string {
+  return createHmac("sha256", secret).update([timestamp, "POST", path, body].join("\n")).digest("hex");
 }
 
 async function callRecommendationApi(url: URL, secret: string, body: string, timestampMs: number): Promise<Response> {
@@ -26,7 +26,7 @@ async function callRecommendationApi(url: URL, secret: string, body: string, tim
     headers: {
       "Content-Type": "application/json",
       "X-Cocktail-Timestamp": timestamp,
-      "X-Cocktail-Signature": signRequest(secret, timestamp, body),
+      "X-Cocktail-Signature": signRequest(secret, timestamp, url.pathname, body),
     },
     body,
     cache: "no-store",
