@@ -12,9 +12,10 @@ applications:
           commands:
             - pnpm --filter '@cocktail-taste-test/contracts' build
             - pnpm --filter web build
-            - ls -ld apps/web/node_modules/next
-            - readlink apps/web/node_modules/next
-            - 'node -p "require.resolve(''next/package.json'', { paths: [''./apps/web''] })"'
+            - pwd
+            - ls -ld node_modules/next
+            - readlink node_modules/next
+            - 'node -p "require.resolve(''next/package.json'')"'
       artifacts:
         baseDirectory: .next
         files:
