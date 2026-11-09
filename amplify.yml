@@ -2,6 +2,7 @@ version: 1
 applications:
   - appRoot: apps/web
     frontend:
+      buildPath: /
       phases:
         preBuild:
           commands:
@@ -12,12 +13,8 @@ applications:
           commands:
             - pnpm --filter '@cocktail-taste-test/contracts' build
             - pnpm --filter web build
-            - pwd
-            - ls -ld node_modules/next
-            - readlink node_modules/next
-            - 'node -p "require.resolve(''next/package.json'')"'
       artifacts:
-        baseDirectory: .next
+        baseDirectory: apps/web/.next
         files:
           - "**/*"
       cache:

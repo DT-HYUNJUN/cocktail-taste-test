@@ -11,3 +11,10 @@ test-results/
 .lambda/
 .backups/
 .aws-sam/
+
+# Dependencies
+node_modules/
+node_modules.backup/
+
+# Temporary deployment artifacts
+.deploy-web/
