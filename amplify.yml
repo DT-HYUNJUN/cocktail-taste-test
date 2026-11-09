@@ -13,7 +13,7 @@ applications:
             - pnpm --filter '@cocktail-taste-test/contracts' build
             - pnpm --filter web build
       artifacts:
-        baseDirectory: apps/web/.next
+        baseDirectory: .next
         files:
           - "**/*"
       cache:
