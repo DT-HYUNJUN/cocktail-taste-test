@@ -7,7 +7,7 @@ applications:
           commands:
             - corepack enable
             - corepack prepare pnpm@11.0.9 --activate
-            - pnpm install --frozen-lockfile
+            - pnpm install --frozen-lockfile --config.node-linker=hoisted
         build:
           commands:
             - pnpm --filter '@cocktail-taste-test/contracts' build
