@@ -156,6 +156,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@aws-sdk/client-ssm':
+        specifier: ^3.1156.0
+        version: 3.1156.0
       '@cocktail-taste-test/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts

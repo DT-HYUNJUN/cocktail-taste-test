@@ -1,5 +1,6 @@
 import { createHmac } from "node:crypto";
 import { NextResponse } from "next/server";
+import { loadApiHmacSecret } from "@/shared/lib/server/api-hmac-secret";
 import { reportRecommendationError } from "@/shared/lib/sentry/report-recommendation-error";
 
 const RETRYABLE_STATUS_CODES = new Set([502, 503, 504]);
@@ -36,9 +37,18 @@ async function callRecommendationApi(url: URL, secret: string, body: string, tim
 
 export async function POST(request: Request) {
   const apiBaseUrl = process.env.API_BASE_URL?.trim();
-  const secret = process.env.API_HMAC_SECRET?.trim();
 
-  if (!apiBaseUrl || !secret || secret.length < 32) {
+  if (!apiBaseUrl) {
+    await reportRecommendationError("configuration");
+
+    return NextResponse.json({ message: "Recommendation API is not configured" }, { status: 503 });
+  }
+
+  let secret: string;
+
+  try {
+    secret = await loadApiHmacSecret();
+  } catch {
     await reportRecommendationError("configuration");
 
     return NextResponse.json({ message: "Recommendation API is not configured" }, { status: 503 });

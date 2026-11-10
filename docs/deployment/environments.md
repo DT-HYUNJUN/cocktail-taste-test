@@ -1,9 +1,9 @@
 # Deployment Environments and Operations
 
-Status: Deployment Ready Locally / Production Pending
-Version: 0.3
+Status: Production Deployment In Progress
+Version: 0.4
 Phase: 5 / P5-06A
-Last Updated: 2026-10-23
+Last Updated: 2026-11-10
 
 ## 1. Environment model
 
@@ -11,7 +11,7 @@ Last Updated: 2026-10-23
 |---|---|---|---|
 | Local | Next.js dev server | local NestJS + Docker PostgreSQL | implementation and integration testing |
 | CI | GitHub Actions | service-container PostgreSQL | deterministic validation; no deployment |
-| Production/demo candidate | Vercel | API Gateway + Lambda + Neon | approved public demonstration only |
+| Production/demo candidate | AWS Amplify Hosting | API Gateway + Lambda + Neon | approved public demonstration only |
 
 A permanent AWS staging stack is excluded by the budget. Validation uses local Docker and isolated test databases; real AWS/Neon validation requires separate approval. Production and test data must never share a database or branch.
 
@@ -21,13 +21,14 @@ Existing code requires:
 
 | Boundary | Variable | Production meaning |
 |---|---|---|
-| Vercel server runtime | `API_BASE_URL`, `API_HMAC_SECRET`, `API_REQUEST_TIMEOUT_MS` | API Gateway origin and server-only signing configuration |
+| Amplify build/runtime | `API_BASE_URL`, `API_AWS_REGION`, `API_HMAC_SECRET_PARAMETER_NAME`, `API_REQUEST_TIMEOUT_MS` | Non-secret API origin and SSM lookup configuration |
+| Amplify SSR Compute role | `ssm:GetParameter` on the exact HMAC parameter | Runtime access to the signing secret without embedding it in build artifacts |
 | Lambda runtime | `DATABASE_*` | Neon pooled endpoint and least-privilege runtime role |
 | Migration/Seed | `MIGRATION_DATABASE_*` | Neon direct endpoint and approved maintenance role |
 | Backup | `BACKUP_DATABASE_*` | direct endpoint and read-only backup role |
 | Local API | `PORT`, `DATABASE_*` | NestJS listener and Docker PostgreSQL |
 
-`apps/web/.env.local` and API `.env` files remain local only. Production values belong in approved Vercel/AWS secret injection. Do not place secrets in Compose YAML, SAM parameter files, Lambda ZIPs, GitHub logs, shell history, command arguments, or repository files.
+`apps/web/.env.local` and API `.env` files remain local only. Production secrets belong in SSM Parameter Store and are accessed through least-privilege runtime roles. Do not place secrets in Amplify `.env.production`, Compose YAML, SAM parameter files, Lambda ZIPs, GitHub logs, shell history, command arguments, or repository files.
 
 ## 3. Database lifecycle
 
@@ -66,12 +67,12 @@ If the budget owner selects scenario B, automation starts the instance only for 
 
 - Neon project/branch/database names, Singapore region approval, role grants, and credential rotation interval.
 - Backup frequency, retention, RPO, and RTO.
-- Whether Vercel production remains free under the user's actual plan/usage; Vercel cost is outside the AWS estimate.
+- Whether Amplify Hosting usage remains within the approved cost envelope.
 - Backup destination and client-side encryption recipient/key custody.
 
 ## 8. Production readiness boundary
 
-The proposed production region pair is AWS Seoul (`ap-northeast-2`) and Neon Singapore (`aws-ap-southeast-1`). AWS CLI/SAM commands must always specify Seoul explicitly. Neon region selection is immutable for the project and must be approved before creation.
+The selected production region is AWS Singapore (`ap-southeast-1`) for Amplify, API Gateway, Lambda, SSM, and Neon (`aws-ap-southeast-1`). AWS CLI/SAM commands must always specify Singapore explicitly. Neon region selection is immutable for the project.
 
-The SAM template's `NoEcho` parameters are a validation-compatible draft, not approval to paste production secrets into a command. Select Parameter Store Standard `SecureString` or Secrets Manager in P5-06B, configure Vercel variables only in its server environment, and keep pooled runtime and direct maintenance credentials separate. See `aws-deployment-readiness.md` for the approval boundaries.
+The SAM template's `NoEcho` parameters are a validation-compatible draft, not approval to paste production secrets into a command. Production uses Parameter Store Standard `SecureString`; Amplify receives only non-secret lookup configuration and reads the HMAC value through its SSR Compute role. Keep pooled runtime and direct maintenance credentials separate. See `aws-deployment-readiness.md` for the approval boundaries.
 

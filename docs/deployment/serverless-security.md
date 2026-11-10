@@ -1,17 +1,17 @@
 # Serverless API Security and Resilience
 
-Status: Implemented Locally
-Version: 0.1
+Status: Deployed / Runtime Validation In Progress
+Version: 0.2
 Phase: 5 / P5-04
-Last Updated: 2026-10-23
+Last Updated: 2026-11-10
 
 ## 1. Selected authentication design
 
 The selected design is **B: HMAC verification at the NestJS Lambda entry point**.
 
-An HTTP API Lambda authorizer payload contains headers, route data, query data, and request context, but its documented payload does not contain the original request body. It therefore cannot prove body integrity. A header-only authorizer plus a second body check would add another paid Lambda invocation without removing the integration-level verification. IAM/SigV4 would require an AWS caller credential or a verified workload-identity path in Vercel, which is not yet approved.
+An HTTP API Lambda authorizer payload contains headers, route data, query data, and request context, but its documented payload does not contain the original request body. It therefore cannot prove body integrity. A header-only authorizer plus a second body check would add another paid Lambda invocation without removing the integration-level verification.
 
-The browser remains anonymous and calls only the same-origin Vercel Route Handler. Vercel serializes the validated JSON once and signs:
+The browser remains anonymous and calls only the same-origin Amplify Hosting Next.js Route Handler. The Route Handler serializes the validated JSON once and signs:
 
 ```text
 timestamp-milliseconds + "\n"
@@ -37,7 +37,7 @@ The default acceptance window is five minutes (`API_HMAC_MAX_AGE_MS=300000`). Re
 
 This bounds replay exposure but does not provide one-time nonce storage. An intercepted request can still be replayed inside the window. TLS, a short window, throttling, a read-only recommendation operation, and secret rotation reduce impact. Full single-use replay prevention would require a shared nonce store and is deferred because it adds cost and operational state.
 
-For rotation, deploy the new value as `API_HMAC_SECRET` in Vercel, retain the old value temporarily as Lambda `API_HMAC_PREVIOUS_SECRET`, switch Vercel traffic, then remove the previous value after the maximum request window plus deployment propagation time. Never log either value.
+For production, both Lambda and the Amplify SSR Route Handler read the current secret from the same SSM Parameter Store `SecureString`. Amplify uses an SSR Compute role restricted to that exact parameter; the secret is not written to `.env.production` or a deployment artifact. During rotation, retain the old value temporarily as Lambda `API_HMAC_PREVIOUS_SECRET`, update the SSM current value, verify Amplify traffic, then remove the previous value after the maximum request window plus deployment propagation time. Never log either value.
 
 ## 3. Timeout and retry
 
@@ -87,6 +87,6 @@ No AWS or Neon resource was created or modified in P5-04.
 
 - Replay inside the five-minute window is possible without a nonce store.
 - Public malformed traffic reaches API Gateway and the lightweight Lambda authentication boundary before rejection.
-- Shared HMAC secrets require coordinated Vercel/Lambda rotation and compromise response.
+- Shared HMAC secrets require coordinated Amplify/Lambda rotation and compromise response.
 - Actual API Gateway throttling, native arm64 behavior, CloudWatch redaction, Neon certificate validation, and combined cold-start latency require an approved AWS/Neon environment.
 - API Gateway's 10 MB platform limit cannot be lowered directly for HTTP API; the implemented 64 KiB application limit occurs after invocation.

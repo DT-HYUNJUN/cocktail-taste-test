@@ -11,6 +11,7 @@ applications:
             - pnpm install --frozen-lockfile
         build:
           commands:
+            - env | grep -E '^(API_BASE_URL|API_AWS_REGION|API_HMAC_SECRET_PARAMETER_NAME|API_REQUEST_TIMEOUT_MS|SENTRY_DSN)=' >> apps/web/.env.production
             - pnpm --filter '@cocktail-taste-test/contracts' build
             - pnpm --filter web build
       artifacts:
