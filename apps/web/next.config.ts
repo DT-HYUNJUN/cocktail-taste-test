@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
 
 export default withSentryConfig(nextConfig, {
   silent: true,
+  buildTimeInstrumentation: false,
   sourcemaps: {
     disable: true,
   },
