@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { useAssessmentStore } from "../../assessment/model/assessment-store";
 import { clearRecommendationResult, loadRecommendationResult } from "../model/result-snapshot";
 import { RecommendationCard } from "./recommendation-card";
+import { ShareResult } from "./share-result";
 import { TasteProfile } from "./taste-profile";
 import { createMockRecommendationResponse } from "../model/mock-recommendation";
 
@@ -126,16 +127,20 @@ export function RecommendationResult() {
         <TasteProfile profile={result.profile} />
       </section>
 
-      <div className="mt-10 flex justify-center sm:mt-12">
+      <div className="mt-10 sm:mt-12">
+        <ShareResult result={result} />
+      </div>
+
+      <div className="mt-6 flex justify-center">
         <button
           type="button"
           onClick={restart}
           className="
             w-full rounded-full
-            bg-primary px-8 py-4
-            text-base font-bold text-primary-foreground
+            border border-border bg-surface px-8 py-3.5
+            text-sm font-bold text-foreground
             transition-all duration-200
-            hover:brightness-95
+            hover:bg-background
             active:scale-[0.98]
             focus-visible:outline-2
             focus-visible:outline-offset-4

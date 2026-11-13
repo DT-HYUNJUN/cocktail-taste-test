@@ -8,12 +8,12 @@ type TasteWheelChartProps = {
 
 const SIZE = 400;
 const CENTER = SIZE / 2;
-const INNER_RADIUS = 26;
-const MAX_RADIUS = 132;
-const LABEL_RADIUS = 157;
-const VALUE_RADIUS = 182;
+const INNER_RADIUS = 24;
+const MAX_RADIUS = 128;
+const LABEL_RADIUS = 148;
+const VALUE_RADIUS = 181;
 
-const COLORS = ["#FF8A80", "#FF6F2C", "#E3B341", "#6B9B77", "#6FAEC3"];
+const COLORS = ["#2A103D", "#6327C6", "#FD4890", "#FF7043", "#E7AF24"];
 
 function polarPoint(radius: number, angle: number) {
   const radians = (angle * Math.PI) / 180;
@@ -42,6 +42,15 @@ function createArcPath(innerRadius: number, outerRadius: number, startAngle: num
   ].join(" ");
 }
 
+function createLabelArcPath(radius: number, startAngle: number, endAngle: number) {
+  const middleAngle = ((startAngle + endAngle) / 2 + 360) % 360;
+  const reverse = middleAngle > 0 && middleAngle < 180;
+  const start = polarPoint(radius, reverse ? endAngle : startAngle);
+  const end = polarPoint(radius, reverse ? startAngle : endAngle);
+
+  return `M ${start.x} ${start.y} A ${radius} ${radius} 0 0 ${reverse ? 0 : 1} ${end.x} ${end.y}`;
+}
+
 export function TasteWheelChart({ dimensions }: TasteWheelChartProps) {
   const id = useId();
 
@@ -56,16 +65,7 @@ export function TasteWheelChart({ dimensions }: TasteWheelChartProps) {
     <figure className="mx-auto w-full max-w-[440px]">
       <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="h-auto w-full" role="img" aria-labelledby={`${id}-title ${id}-desc`}>
         <title id={`${id}-title`}>나의 칵테일 취향 원형 차트</title>
-        <desc id={`${id}-desc`}>{description}. 각 부채꼴의 길이는 5점 만점의 취향 점수를 나타냅니다.</desc>
-
-        {/* 원형 눈금 */}
-        <g aria-hidden="true">
-          {[1, 2, 3, 4, 5].map((level) => {
-            const radius = INNER_RADIUS + ((MAX_RADIUS - INNER_RADIUS) * level) / 5;
-
-            return <circle key={level} cx={CENTER} cy={CENTER} r={radius} fill="none" stroke="#E9E2DB" strokeWidth="1" strokeDasharray="3 5" />;
-          })}
-        </g>
+        <desc id={`${id}-desc`}>{description}. 각 바의 길이는 5점 만점의 취향 점수를 나타냅니다.</desc>
 
         {/* 취향별 부채꼴 */}
         <g aria-hidden="true">
@@ -73,30 +73,32 @@ export function TasteWheelChart({ dimensions }: TasteWheelChartProps) {
             const startAngle = -90 + index * sectorAngle;
             const endAngle = startAngle + sectorAngle;
             const middleAngle = (startAngle + endAngle) / 2;
-
-            const barStartAngle = startAngle + 1;
-            const barEndAngle = endAngle - 1;
-
             const outerRadius = INNER_RADIUS + ((MAX_RADIUS - INNER_RADIUS) * score) / 5;
-
-            const labelPoint = polarPoint(LABEL_RADIUS, middleAngle);
-
             const valuePoint = polarPoint(VALUE_RADIUS, middleAngle);
+            const labelPathId = `${id}-label-${index}`;
 
             return (
               <g key={dimension}>
-                {/* 점수 부채꼴 */}
-                <path d={createArcPath(INNER_RADIUS, outerRadius, barStartAngle, barEndAngle)} fill={COLORS[index % COLORS.length]} />
+                <path
+                  d={createArcPath(INNER_RADIUS, outerRadius, startAngle + 0.35, endAngle - 0.35)}
+                  fill={COLORS[index % COLORS.length]}
+                  stroke="#FFFFFF"
+                  strokeWidth="1"
+                />
 
-                {/* 항목 이름 */}
-                <text x={labelPoint.x} y={labelPoint.y} textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight="600" fill="#24211F">
-                  {DIMENSION_LABELS[dimension]}
+                <defs>
+                  <path id={labelPathId} d={createLabelArcPath(LABEL_RADIUS, startAngle + 8, endAngle - 8)} />
+                </defs>
+
+                <text fill="#332B35" fontSize="11" fontWeight="600" letterSpacing="0.08em">
+                  <textPath href={`#${labelPathId}`} startOffset="50%" textAnchor="middle">
+                    {DIMENSION_LABELS[dimension]}
+                  </textPath>
                 </text>
 
-                {/* 점수 배지 */}
-                <circle cx={valuePoint.x} cy={valuePoint.y} r="12" fill="#FFF0E6" />
+                <circle cx={valuePoint.x} cy={valuePoint.y} r="14" fill="#F1EFED" />
 
-                <text x={valuePoint.x} y={valuePoint.y} textAnchor="middle" dominantBaseline="central" fontSize="11" fontWeight="700" fill="#A94417">
+                <text x={valuePoint.x} y={valuePoint.y} textAnchor="middle" dominantBaseline="central" fontSize="12" fontWeight="700" fill="#211D22">
                   {score}
                 </text>
               </g>
@@ -104,15 +106,10 @@ export function TasteWheelChart({ dimensions }: TasteWheelChartProps) {
           })}
         </g>
 
-        {/* 중앙 장식 */}
-        <circle cx={CENTER} cy={CENTER} r={INNER_RADIUS} fill="#FFFFFF" stroke="#F0E4D9" strokeWidth="1" />
-
-        <text x={CENTER} y={CENTER} textAnchor="middle" dominantBaseline="central" fontSize="21" aria-hidden="true">
-          🍸
-        </text>
+        <circle cx={CENTER} cy={CENTER} r={INNER_RADIUS} fill="#FFFFFF" />
       </svg>
 
-      <figcaption className="mt-2 text-center text-xs text-muted-foreground">부채꼴이 길수록 해당 취향 점수가 높아요.</figcaption>
+      <figcaption className="mt-1 text-center text-xs text-muted-foreground">바가 길수록 해당 취향 점수가 높아요.</figcaption>
     </figure>
   );
 }

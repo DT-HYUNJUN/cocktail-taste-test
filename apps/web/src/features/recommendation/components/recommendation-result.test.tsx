@@ -138,6 +138,9 @@ describe("RecommendationResult", () => {
     ).toBeVisible();
 
     expect(within(card).getByText("선호하는 단맛·청량감과 잘 어울려요")).toBeVisible();
+    expect(within(card).getByRole("heading", { name: "이 칵테일의 맛" })).toBeVisible();
+    expect(within(card).getByRole("meter", { name: "산미 4점" })).toHaveAttribute("aria-valuenow", "4");
+    expect(within(card).getByText("매우 높음")).toBeVisible();
   });
 
   it("handles an empty recommendation list", async () => {

@@ -1,33 +1,24 @@
 import type { RecommendationItem } from "@cocktail-taste-test/contracts";
-import { DIMENSION_LABELS, FLAVOR_LABELS, SCORE_LABELS, SPIRIT_LABELS } from "./result-labels";
+import { DIMENSION_LABELS, FLAVOR_LABELS, getCocktailDescription, getCocktailDisplayName, SCORE_LABELS, SPIRIT_LABELS } from "./result-labels";
 import { RecommendationReasons } from "./recommendation-reasons";
 import { CocktailImage } from "../ui/cocktail-image";
 
 export function RecommendationCard({ item }: { item: RecommendationItem }) {
   const { cocktail } = item;
+  const displayName = getCocktailDisplayName(cocktail.id, cocktail.name);
+  const description = getCocktailDescription(cocktail.id);
 
   return (
     <article className="overflow-hidden rounded-card border border-border bg-surface">
       <div className="grid md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
         {/* 칵테일 이미지 */}
-        <div className="relative aspect-[4/5] bg-[#FFF0E6] md:aspect-auto md:min-h-[420px]">
-          {cocktail.imageUrl ? (
-            <CocktailImage imageUrl={cocktail.imageUrl} name={`${cocktail.name} 칵테일`} />
-          ) : (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4" role="img" aria-label={`${cocktail.name} 이미지 준비 중`}>
-              <span aria-hidden="true" className="text-7xl">
-                🍸
-              </span>
-              <span className="text-sm font-medium text-[#A94417]">이미지 준비 중</span>
-            </div>
-          )}
-        </div>
+        <CocktailImage cocktailId={cocktail.id} imageUrl={cocktail.imageUrl} name={displayName} />
 
         {/* 칵테일 정보 */}
-        <div className="flex flex-col justify-center p-6 sm:p-8">
+        <div className="flex flex-col p-6 sm:p-8">
           <p className="text-xs font-bold tracking-[0.16em] text-[#B74716]">YOUR COCKTAIL</p>
 
-          <h3 className="mt-3 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">{cocktail.name}</h3>
+          <h3 className="mt-3 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">{displayName}</h3>
 
           {/* 풍미 / 베이스 태그 */}
           <div className="mt-5 flex flex-wrap gap-2">
@@ -44,6 +35,8 @@ export function RecommendationCard({ item }: { item: RecommendationItem }) {
             ))}
           </div>
 
+          {description ? <p className="mt-5 text-sm leading-6 text-muted-foreground">{description}</p> : null}
+
           {/* 추천 이유 */}
           <div className="mt-7 border-t border-border pt-6">
             <h4 className="text-base font-bold text-foreground">이 칵테일이 어울리는 이유</h4>
@@ -56,22 +49,35 @@ export function RecommendationCard({ item }: { item: RecommendationItem }) {
               <p className="mt-3 text-sm leading-6 text-muted-foreground">취향 정보를 바탕으로 선정된 칵테일이에요.</p>
             )}
           </div>
+
+          {/* 칵테일 특성 */}
+          <div className="mt-7 border-t border-border pt-6">
+            <h4 className="text-base font-bold text-foreground">이 칵테일의 맛</h4>
+
+            <dl className="mt-4 space-y-3">
+              {Object.entries(cocktail.dimensions).map(([dimension, score]) => (
+                <div key={dimension} className="grid grid-cols-[3.5rem_minmax(0,1fr)_4rem] items-center gap-3">
+                  <dt className="text-xs font-semibold text-foreground">{DIMENSION_LABELS[dimension as keyof typeof DIMENSION_LABELS]}</dt>
+
+                  <dd className="contents">
+                    <div
+                      className="h-2 overflow-hidden rounded-full bg-[#F2EAE4]"
+                      role="meter"
+                      aria-label={`${DIMENSION_LABELS[dimension as keyof typeof DIMENSION_LABELS]} ${score}점`}
+                      aria-valuemin={1}
+                      aria-valuemax={5}
+                      aria-valuenow={score}
+                    >
+                      <div className="h-full rounded-full bg-primary" style={{ width: `${(score / 5) * 100}%` }} />
+                    </div>
+
+                    <span className="text-right text-xs font-semibold text-muted-foreground">{SCORE_LABELS[score]}</span>
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </div>
         </div>
-      </div>
-
-      {/* 칵테일 특성 */}
-      <div className="border-t border-border px-6 py-6 sm:px-8">
-        <h4 className="mb-4 text-sm font-bold text-foreground">이 칵테일의 특징</h4>
-
-        <dl className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-          {Object.entries(cocktail.dimensions).map(([dimension, score]) => (
-            <div key={dimension} className="rounded-xl bg-background p-3">
-              <dt className="text-xs font-medium text-muted-foreground">{DIMENSION_LABELS[dimension as keyof typeof DIMENSION_LABELS]}</dt>
-
-              <dd className="mt-1 text-sm font-bold text-foreground">{SCORE_LABELS[score]}</dd>
-            </div>
-          ))}
-        </dl>
       </div>
     </article>
   );
