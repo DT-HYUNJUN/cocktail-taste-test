@@ -55,7 +55,7 @@ test("E2E-01 completes the full assessment and renders a recommendation", async 
   await completeAssessment(page);
   await expect(page).toHaveURL(/\/result$/);
   await expect(page.getByRole("heading", { name: "당신을 위한 한 잔을 찾았어요!" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Tom Collins" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "톰 콜린스" })).toBeVisible();
   await expect(page.getByText("선호하는 진 베이스 칵테일이에요")).toBeVisible();
 });
 
@@ -97,7 +97,7 @@ test("E2E-04 restores the result and card after reload", async ({ page }) => {
   await completeAssessment(page);
   await expect(page).toHaveURL(/\/result$/);
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Tom Collins" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "톰 콜린스" })).toBeVisible();
 });
 
 test("E2E-05 treats an empty recommendation response as a normal result", async ({ page }) => {
