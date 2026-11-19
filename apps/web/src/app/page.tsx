@@ -25,9 +25,7 @@ export default function Home() {
       <div className="mx-auto max-w-6xl px-5 sm:px-8">
         <header className="flex h-20 items-center">
           <Link href="/" className="flex items-center gap-3 font-bold tracking-tight">
-            <span aria-hidden="true" className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-              🍹
-            </span>
+            <Image src="/icon.svg" alt="" width={40} height={40} aria-hidden="true" className="size-10 rounded-xl" />
             <span>칵테일 취향 테스트</span>
           </Link>
         </header>

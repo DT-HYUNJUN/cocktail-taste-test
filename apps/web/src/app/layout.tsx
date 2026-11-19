@@ -19,6 +19,26 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "칵테일 취향 테스트",
   description: "8개의 질문으로 나의 취향에 어울리는 칵테일을 찾아보세요.",
+  icons: {
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+  },
+  metadataBase: new URL("https://www.cocktailtaste.site"),
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    url: "/",
+    title: "칵테일 취향 테스트",
+    description: "8개의 질문으로 나의 취향에 어울리는 칵테일을 찾아보세요.",
+    siteName: "칵테일 취향 테스트",
+    locale: "ko_KR",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "칵테일 취향 테스트",
+    description: "8개의 질문으로 나의 취향에 어울리는 칵테일을 찾아보세요.",
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

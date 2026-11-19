@@ -425,9 +425,7 @@ React Query는 요청의 pending/success/error 상태만 관리한다. 성공 �
 
 다음 항목은 별도 구현 단계에서 결정한다.
 
-- 공유 가능한 영구 결과 URL 및 서버 저장 방식
 - 칵테일 상세 페이지
-- 결과 공유 기능의 구체적인 구현
 - Analytics
 - 사용자 인증 및 즐겨찾기
 
@@ -437,13 +435,14 @@ React Query는 요청의 pending/success/error 상태만 관리한다. 성공 �
 
 Phase 4의 현재 구현 범위는 다음과 같다.
 
-- `/`, `/test`, `/result`의 익명 핵심 흐름
+- `/`, `/test`, `/result`, `/results/{shareId}`의 익명 핵심 흐름
 - Assessment v1의 8개 질문, 답변 수정, 선택 제한 및 접근성 있는 포커스 이동
 - Zustand와 versioned `sessionStorage`를 사용한 진행 상태 복구
 - Next.js Route Handler와 TanStack Query를 사용한 NestJS 추천 API 연동
 - 런타임 HTTP Contract 검증, 오류 후 명시적 재시도 및 중복 제출 방지
 - Taste Profile, 최대 5개 추천 카드, 구조화된 추천 이유 및 빈 추천 결과 표시
 - versioned 결과 snapshot 복구와 다시 테스트하기
+- Backend가 답변으로 결과를 재계산한 뒤 30일간 제공하는 익명 공유 결과 URL과 신규 사용자 테스트 CTA
 - Vitest/RTL, Playwright, PostgreSQL 통합 및 NestJS HTTP E2E 품질 게이트
 
 추천 계산과 추천 이유 생성은 계속 Backend Domain의 책임이다. Web은 API의 rank를 그대로 표시하고 임의의 점수나 근거를 만들지 않는다.

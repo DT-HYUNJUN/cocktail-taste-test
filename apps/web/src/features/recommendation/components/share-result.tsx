@@ -1,13 +1,15 @@
 "use client";
 
-import type { RecommendationResponse } from "@cocktail-taste-test/contracts";
-import { useState } from "react";
+import type { CreateRecommendationRequest, RecommendationResponse } from "@cocktail-taste-test/contracts";
+import { useRef, useState } from "react";
 
+import { createSharedResult } from "../api/shared-results";
 import { createResultImage } from "../lib/create-result-image";
 import { DIMENSION_LABELS, getCocktailDisplayName, SCORE_LABELS } from "./result-labels";
 
 type ShareResultProps = {
   result: RecommendationResponse;
+  answers: CreateRecommendationRequest["answers"] | null;
 };
 
 type ShareStatus = "idle" | "shared" | "copied" | "failed";
@@ -24,7 +26,7 @@ function createShareText(result: RecommendationResponse) {
     .map(({ dimension, score }) => `${DIMENSION_LABELS[dimension]} ${SCORE_LABELS[score]}`)
     .join(" · ");
 
-  return ["나의 칵테일 취향 테스트 결과 🍸", cocktailLine, topDimensions ? `주요 취향: ${topDimensions}` : null, "너에게 어울리는 칵테일도 확인해 봐!"].filter(Boolean).join("\n");
+  return ["나의 칵테일 취향 테스트 결과 🍸", cocktailLine, topDimensions ? `주요 취향: ${topDimensions}` : null, "내 결과를 확인하고, 너에게 어울리는 칵테일도 찾아봐!"].filter(Boolean).join("\n");
 }
 
 async function copyText(text: string) {
@@ -47,20 +49,27 @@ async function copyText(text: string) {
   if (!copied) throw new Error("Copy failed");
 }
 
-export function ShareResult({ result }: ShareResultProps) {
+export function ShareResult({ result, answers }: ShareResultProps) {
   const [status, setStatus] = useState<ShareStatus>("idle");
   const [isSharing, setIsSharing] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [isSaving, setIsSaving] = useState(false);
+  const sharedUrlRef = useRef<string | null>(null);
 
   const share = async () => {
-    const url = new URL("/", window.location.origin).toString();
     const text = createShareText(result);
 
     setIsSharing(true);
     setStatus("idle");
 
     try {
+      if (answers === null) throw new Error("Assessment answers are unavailable");
+      if (sharedUrlRef.current === null) {
+        const { shareId } = await createSharedResult({ answers });
+        sharedUrlRef.current = new URL(`/results/${shareId}`, window.location.origin).toString();
+      }
+      const url = sharedUrlRef.current;
+
       if (navigator.share) {
         await navigator.share({ title: "칵테일 취향 테스트 결과", text, url });
         setStatus("shared");
@@ -111,7 +120,7 @@ export function ShareResult({ result }: ShareResultProps) {
       <h2 id="share-result-title" className="mt-2 text-xl font-bold text-foreground sm:text-2xl">
         이 결과를 친구에게 공유해 보세요
       </h2>
-      <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-muted-foreground">내 추천 칵테일과 주요 취향을 보내고, 친구에게도 어울리는 한 잔을 찾아보라고 알려주세요.</p>
+      <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-muted-foreground">친구가 내 추천 칵테일과 취향 결과를 확인하고, 자신의 테스트도 시작할 수 있어요.</p>
 
       <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
         <button

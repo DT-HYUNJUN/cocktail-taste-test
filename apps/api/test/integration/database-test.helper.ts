@@ -3,6 +3,8 @@ import { DataSource } from 'typeorm';
 
 import { CocktailEntity } from '../../src/cocktails/entities/cocktail.entity';
 import { CreateCocktails1792022400000 } from '../../src/database/migrations/1792022400000-CreateCocktails';
+import { SharedResultEntity } from '../../src/shared-results/entities/shared-result.entity';
+import { CreateSharedResults1794873600000 } from '../../src/database/migrations/1794873600000-CreateSharedResults';
 
 const TEST_DATABASE_NAME = 'cocktail_taste_test';
 
@@ -48,8 +50,8 @@ export function createTestDataSource(): DataSource {
   return new DataSource({
     type: 'postgres',
     ...config,
-    entities: [CocktailEntity],
-    migrations: [CreateCocktails1792022400000],
+    entities: [CocktailEntity, SharedResultEntity],
+    migrations: [CreateCocktails1792022400000, CreateSharedResults1794873600000],
     migrationsTableName: 'typeorm_migrations',
     synchronize: false,
     logging: false,

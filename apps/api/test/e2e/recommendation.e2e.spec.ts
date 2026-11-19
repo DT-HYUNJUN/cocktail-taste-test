@@ -65,6 +65,8 @@ describe('Recommendation HTTP E2E', () => {
     vi.stubEnv('DATABASE_USER', config.username);
     vi.stubEnv('DATABASE_PASSWORD', config.password);
     vi.stubEnv('DATABASE_NAME', config.database);
+    vi.stubEnv('DATABASE_SSL_MODE', 'disable');
+    vi.stubEnv('DATABASE_POOL_MAX', '1');
 
     dataSource = createTestDataSource();
 

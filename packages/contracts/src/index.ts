@@ -41,6 +41,13 @@ export type RecommendationReason =
   | { type: 'base-spirit-match'; baseSpirits: BaseSpirit[] };
 export type RecommendationItem = { rank: number; cocktail: CocktailSummary; reasons: RecommendationReason[] };
 export type RecommendationResponse = { profile: UserTasteSummary; recommendations: RecommendationItem[] };
+export type CreateSharedResultRequest = CreateRecommendationRequest;
+export type CreateSharedResultResponse = { shareId: string; expiresAt: string };
+export type SharedResultResponse = {
+  result: RecommendationResponse;
+  createdAt: string;
+  expiresAt: string;
+};
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -121,5 +128,29 @@ export function isRecommendationResponse(value: unknown): value is Recommendatio
 
 export function parseRecommendationResponse(value: unknown): RecommendationResponse {
   if (!isRecommendationResponse(value)) throw new Error('Invalid recommendation response');
+  return value;
+}
+
+const isIsoDate = (value: unknown): value is string =>
+  typeof value === 'string' && !Number.isNaN(Date.parse(value));
+
+export function isCreateSharedResultResponse(value: unknown): value is CreateSharedResultResponse {
+  return isRecord(value) && hasOnlyKeys(value, ['shareId', 'expiresAt']) &&
+    typeof value.shareId === 'string' && /^[A-Za-z0-9_-]{22}$/.test(value.shareId) &&
+    isIsoDate(value.expiresAt);
+}
+
+export function parseCreateSharedResultResponse(value: unknown): CreateSharedResultResponse {
+  if (!isCreateSharedResultResponse(value)) throw new Error('Invalid shared result response');
+  return value;
+}
+
+export function isSharedResultResponse(value: unknown): value is SharedResultResponse {
+  return isRecord(value) && hasOnlyKeys(value, ['result', 'createdAt', 'expiresAt']) &&
+    isRecommendationResponse(value.result) && isIsoDate(value.createdAt) && isIsoDate(value.expiresAt);
+}
+
+export function parseSharedResultResponse(value: unknown): SharedResultResponse {
+  if (!isSharedResultResponse(value)) throw new Error('Invalid shared result response');
   return value;
 }

@@ -8,5 +8,6 @@ import { RecommendationService } from './recommendation.service';
   imports: [CocktailsModule],
   controllers: [RecommendationController],
   providers: [RecommendationService],
+  exports: [RecommendationService],
 })
 export class RecommendationModule {}

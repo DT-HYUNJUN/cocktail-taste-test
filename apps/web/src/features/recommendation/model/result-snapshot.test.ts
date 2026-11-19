@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { clearRecommendationResult, loadRecommendationResult, RECOMMENDATION_RESULT_SCHEMA_VERSION, RECOMMENDATION_RESULT_STORAGE_KEY, saveRecommendationResult } from "./result-snapshot";
 
 const result = {
@@ -7,7 +7,6 @@ const result = {
 };
 
 beforeEach(() => { sessionStorage.clear(); clearRecommendationResult(); });
-afterEach(() => vi.restoreAllMocks());
 
 describe("recommendation result snapshot", () => {
   it("stores and restores a versioned validated result", () => {
@@ -27,10 +26,12 @@ describe("recommendation result snapshot", () => {
   });
 
   it("uses memory when sessionStorage access fails", () => {
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new Error("blocked"); });
+    const setItem = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new Error("blocked"); });
     expect(saveRecommendationResult(result)).toEqual(result);
-    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => { throw new Error("blocked"); });
+    const getItem = vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => { throw new Error("blocked"); });
     expect(loadRecommendationResult()).toEqual(result);
+    setItem.mockRestore();
+    getItem.mockRestore();
   });
 
   it("rejects invalid data before saving", () => {

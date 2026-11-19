@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { isRecommendationResponse, parseRecommendationResponse } from './index.js';
+import {
+  isCreateSharedResultResponse,
+  isRecommendationResponse,
+  isSharedResultResponse,
+  parseRecommendationResponse,
+} from './index.js';
 
 const response = {
   profile: {
@@ -42,5 +47,24 @@ describe('recommendation HTTP contract', () => {
     expect(isRecommendationResponse({ ...response, recommendations: [{ ...item, reasons: [{ type: 'flavor-match', flavors: ['herbal'] }] }] })).toBe(false);
     expect(isRecommendationResponse({ ...response, recommendations: [{ ...item, reasons: [{ type: 'base-spirit-match', baseSpirits: ['rum'] }] }] })).toBe(false);
     expect(isRecommendationResponse({ ...response, recommendations: [{ ...item, reasons: [{ type: 'core-match', dimensions: ['refreshing'] }] }] })).toBe(false);
+  });
+});
+
+describe('shared result HTTP contract', () => {
+  it('accepts create and read responses with opaque IDs and timestamps', () => {
+    expect(isCreateSharedResultResponse({
+      shareId: 'abcdefghijklmnopqrstuv',
+      expiresAt: '2026-12-17T00:00:00.000Z',
+    })).toBe(true);
+    expect(isSharedResultResponse({
+      result: response,
+      createdAt: '2026-11-17T00:00:00.000Z',
+      expiresAt: '2026-12-17T00:00:00.000Z',
+    })).toBe(true);
+  });
+
+  it('rejects malformed IDs, timestamps, and recommendation snapshots', () => {
+    expect(isCreateSharedResultResponse({ shareId: 'short', expiresAt: '2026-12-17T00:00:00.000Z' })).toBe(false);
+    expect(isSharedResultResponse({ result: {}, createdAt: 'invalid', expiresAt: 'invalid' })).toBe(false);
   });
 });

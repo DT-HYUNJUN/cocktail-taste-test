@@ -4,7 +4,8 @@ import type { RecommendationResponse } from "@cocktail-taste-test/contracts";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useAssessmentStore } from "../../assessment/model/assessment-store";
+import { hydrateAssessmentStore, useAssessmentStore } from "../../assessment/model/assessment-store";
+import { serializeAssessmentAnswers } from "../../assessment/model/answers";
 import { clearRecommendationResult, loadRecommendationResult } from "../model/result-snapshot";
 import { RecommendationCard } from "./recommendation-card";
 import { ShareResult } from "./share-result";
@@ -13,8 +14,14 @@ import { createMockRecommendationResponse } from "../model/mock-recommendation";
 
 export function RecommendationResult() {
   const router = useRouter();
+  const assessmentAnswers = useAssessmentStore((state) => state.answers);
+  const assessmentHasHydrated = useAssessmentStore((state) => state.hasHydrated);
   const [result, setResult] = useState<RecommendationResponse | null>(null);
   const [hasRecovered, setHasRecovered] = useState(false);
+
+  useEffect(() => {
+    if (!assessmentHasHydrated) void hydrateAssessmentStore();
+  }, [assessmentHasHydrated]);
 
   // useEffect(() => {
   //   let active = true;
@@ -128,7 +135,7 @@ export function RecommendationResult() {
       </section>
 
       <div className="mt-10 sm:mt-12">
-        <ShareResult result={result} />
+        <ShareResult result={result} answers={serializeAssessmentAnswers(assessmentAnswers)} />
       </div>
 
       <div className="mt-6 flex justify-center">

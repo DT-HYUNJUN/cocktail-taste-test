@@ -45,7 +45,7 @@ function TagGroup({ title, values, variant }: TagGroupProps) {
   );
 }
 
-export function TasteProfile({ profile }: { profile: UserTasteSummary }) {
+export function TasteProfile({ profile, perspective = "owner" }: { profile: UserTasteSummary; perspective?: "owner" | "shared" }) {
   return (
     <section
       aria-labelledby="taste-profile-title"
@@ -56,13 +56,13 @@ export function TasteProfile({ profile }: { profile: UserTasteSummary }) {
       "
     >
       <div>
-        <p className="text-xs font-bold tracking-[0.12em] text-[#B74716]">MY TASTE PROFILE</p>
+        <p className="text-xs font-bold tracking-[0.12em] text-[#B74716]">{perspective === "shared" ? "SHARED TASTE PROFILE" : "MY TASTE PROFILE"}</p>
 
         <h2 id="taste-profile-title" className="mt-2 text-2xl font-bold tracking-tight text-foreground">
-          나의 취향 프로필
+          {perspective === "shared" ? "친구의 취향 프로필" : "나의 취향 프로필"}
         </h2>
 
-        <p className="mt-2 text-sm text-muted-foreground">내가 좋아하는 칵테일의 특징을 한눈에 확인해 보세요.</p>
+        <p className="mt-2 text-sm text-muted-foreground">{perspective === "shared" ? "친구가 좋아하는 칵테일의 특징을 한눈에 확인해 보세요." : "내가 좋아하는 칵테일의 특징을 한눈에 확인해 보세요."}</p>
       </div>
 
       {/* 취향 원형 차트 */}
