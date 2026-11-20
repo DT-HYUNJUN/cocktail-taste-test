@@ -1,9 +1,9 @@
 # Deployment Environments and Operations
 
 Status: Production Deployment In Progress
-Version: 0.4
+Version: 0.5
 Phase: 5 / P5-06A
-Last Updated: 2026-11-10
+Last Updated: 2026-11-19
 
 ## 1. Environment model
 
@@ -23,7 +23,7 @@ Existing code requires:
 |---|---|---|
 | Amplify build/runtime | `API_BASE_URL`, `API_AWS_REGION`, `API_HMAC_SECRET_PARAMETER_NAME`, `API_REQUEST_TIMEOUT_MS` | Non-secret API origin and SSM lookup configuration |
 | Amplify SSR Compute role | `ssm:GetParameter` on the exact HMAC parameter | Runtime access to the signing secret without embedding it in build artifacts |
-| Lambda runtime | `DATABASE_*` | Neon pooled endpoint and least-privilege runtime role |
+| Lambda runtime | `DATABASE_*` | Neon pooled endpoint and least-privilege runtime role; cocktail reads plus shared-result `SELECT`/`INSERT`/`DELETE` |
 | Migration/Seed | `MIGRATION_DATABASE_*` | Neon direct endpoint and approved maintenance role |
 | Backup | `BACKUP_DATABASE_*` | direct endpoint and read-only backup role |
 | Local API | `PORT`, `DATABASE_*` | NestJS listener and Docker PostgreSQL |
@@ -35,6 +35,8 @@ Existing code requires:
 - Keep TypeORM `synchronize: false` in every environment.
 - Back up and verify the target, then run `pnpm --filter api db:migrate` through the direct endpoint as a release step before switching Lambda traffic.
 - Run `pnpm --filter api db:show` to confirm no pending migrations after release.
+- After a migration creates or replaces an application table, verify the pooled runtime role has only the operations required by the deployed API. Migration ownership does not grant a separate runtime role access automatically.
+- `shared_results` requires runtime `SELECT`, `INSERT`, and `DELETE`; it does not require `UPDATE`, `TRUNCATE`, `REFERENCES`, or `TRIGGER`. The currently deployed `cocktail_runtime_ro` name is legacy and should not be interpreted as the effective privilege policy.
 - Seed is a separate, manual, idempotent action. Current seed code rejects `is_active=true`; catalog activation requires the existing separate approval process.
 - Never run integration-test cleanup helpers against production. They already restrict the database name and local host, and production procedures must not weaken those guards.
 - Do not recreate or initialize the PostgreSQL volume during ordinary releases.

@@ -2,7 +2,7 @@
 
 Status: Implemented
 Version: v1
-Last Updated: 2026-11-17
+Last Updated: 2026-11-19
 
 ## Purpose
 
@@ -33,6 +33,8 @@ Owner result
 - 만료 시각
 
 공개 결과는 생성 후 30일 동안 조회할 수 있다. 만료 결과는 API에서 반환하지 않으며, 만료 행은 후속 공유 생성 시 opportunistic cleanup 대상으로 삭제한다. 엄격한 물리 삭제 SLA가 필요해지면 별도의 scheduled cleanup job을 추가한다.
+
+운영 DB의 Lambda runtime role은 `shared_results`에 한해 `SELECT`, `INSERT`, `DELETE` 권한을 가진다. `INSERT`는 immutable snapshot 생성, `SELECT`는 공유 결과 조회, `DELETE`는 위 만료 행 정리에 필요하다. `UPDATE`, `TRUNCATE`, `REFERENCES`, `TRIGGER`는 필요하지 않다. Migration role이 테이블을 생성해도 별도 runtime role에 권한이 자동 부여되지 않으므로 배포 절차에서 effective grants를 검증한다.
 
 ## HTTP Contract
 

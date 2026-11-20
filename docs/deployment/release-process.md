@@ -1,9 +1,9 @@
 # Release Process
 
 Status: Deployment Runbook Ready / Execution Approval Required
-Version: 0.4
+Version: 0.5
 Phase: 5 / P5-06A
-Last Updated: 2026-10-23
+Last Updated: 2026-11-19
 
 ## 1. Current CI baseline
 
@@ -102,10 +102,11 @@ Before every schema/data release:
 2. Create an encrypted logical backup through the direct endpoint and verify its SHA-256.
 3. Restore the selected backup into an isolated database/branch and run the checks in `database-restore.md`.
 4. Run `db:show`, then `db:migrate`; run `db:show` again and require no pending migration.
-5. Run Seed only when initial catalog rows are missing. A repeated run must report zero inserts and must not change `is_active`.
-6. Require a separate reviewed statement for any catalog activation. Seed cannot activate data.
-7. Run readiness, signed recommendation, inactive-filtering, and approved-active-data smoke tests.
-8. Record backup checksum, migration IDs, actual inserted Seed count, active row count, artifact checksum, and rollback compatibility.
+5. Verify effective grants for every table created or changed by the migration. In particular, the runtime role requires `SELECT`, `INSERT`, and `DELETE` on `shared_results`; table ownership by the migration role is not sufficient.
+6. Run Seed only when initial catalog rows are missing. A repeated run must report zero inserts and must not change `is_active`.
+7. Require a separate reviewed statement for any catalog activation. Seed cannot activate data.
+8. Run readiness, signed recommendation, shared-result create/read, inactive-filtering, and approved-active-data smoke tests.
+9. Record backup checksum, migration IDs, runtime grant verification, actual inserted Seed count, active row count, artifact checksum, and rollback compatibility.
 
 Migration or restore failure stops the release. Never automatically revert a production migration, overwrite production from a dump, or promote an unverified isolated restore.
 
@@ -115,15 +116,15 @@ Every resource-creating group requires the user's explicit approval. Commands be
 
 1. **Neon project:** create in Singapore, then create separate runtime, migration/seed, and backup roles. Stop if region, Free plan, or role isolation differs from the approved record; delete only newly created empty resources after confirmation.
 2. **Connections:** set pooled `DATABASE_*` and direct `MIGRATION_DATABASE_*`/`BACKUP_DATABASE_*` in the approved secret stores; test `verify-full`. Stop on hostname/certificate or privilege failure.
-3. **Migration:** run `pnpm.cmd --filter api db:show`, `db:migrate`, then `db:show`. Any non-zero result or remaining migration stops release; do not auto-revert.
+3. **Migration and grants:** run `pnpm.cmd --filter api db:show`, `db:migrate`, then `db:show`. Verify table-level runtime grants required by the new schema, including `SELECT`/`INSERT`/`DELETE` on `shared_results`. Any non-zero result, remaining migration, or missing grant stops release; do not auto-revert.
 4. **Seed:** run `pnpm.cmd --filter api db:seed` explicitly. Repeat once and require zero inserts. Keep every row inactive until separate content approval.
 5. **Backup/restore:** run `pnpm.cmd db:backup`, verify ciphertext SHA-256, restore into an isolated Neon database/branch, compare IDs/fields/migrations, then smoke-test. Any failure stops release and production remains untouched.
 6. **Artifact:** run `pnpm.cmd package:lambda`; retain `cocktail-taste-api.zip`, its `.sha256`, commit SHA, and byte sizes. Stop if checksum reproduction or size limits fail.
-7. **Template:** run `sam validate --lint --template-file infrastructure/sam/template.yaml` and generate/review a change set in `ap-northeast-2`. Do not execute an unexpected change set.
+7. **Template:** run `sam validate --lint --template-file infrastructure/sam/template.yaml` and generate/review a change set in `ap-southeast-1`. Do not execute an unexpected change set.
 8. **AWS controls:** after approval, create budget/anomaly notifications and the selected secret parameters, then deploy the reviewed SAM stack with an explicitly supplied region. Stop if concurrency quota, IAM, logs, or throttling differs.
 9. **Secrets:** inject HMAC/DB values without command-line or log exposure. Verify Lambda and Vercel current secrets match; use the previous-secret variable only for a bounded rotation window.
 10. **Vercel:** set server-only `API_BASE_URL`, `API_HMAC_SECRET`, and timeout. Do not expose them with a public prefix.
-11. **E2E:** exercise missing/invalid/expired/tampered signatures, health/readiness, one valid recommendation, cold DB wake, timeout and one retry through the public Vercel route. Roll Vercel back to the previous origin and Lambda to the prior schema-compatible artifact on failure.
+11. **E2E:** exercise missing/invalid/expired/tampered signatures, health/readiness, one valid recommendation, shared-result create/read, cold DB wake, timeout and one retry through the public Vercel route. Roll Vercel back to the previous origin and Lambda to the prior schema-compatible artifact on failure.
 12. **Observe:** inspect sanitized CloudWatch logs, errors, duration, throttles, API counts, Neon usage, and estimated/actual cost. Keep the stack only after acceptance; otherwise follow the reviewed deletion checklist while preserving encrypted backups.
 
 Recommended initial deployment commands (values supplied through an approved non-logging mechanism):
@@ -133,7 +134,7 @@ pnpm.cmd check
 pnpm.cmd package:lambda
 sam validate --lint --template-file infrastructure/sam/template.yaml
 sam build --template-file infrastructure/sam/template.yaml
-sam deploy --region ap-northeast-2 --guided
+sam deploy --region ap-southeast-1 --guided
 ```
 
 `sam deploy` creates billable-capable resources and is prohibited until P5-06B approval. The generated Lambda execution role should retain logging permission only; add no database/network AWS permissions because Neon is reached over public TLS without a VPC/NAT Gateway.

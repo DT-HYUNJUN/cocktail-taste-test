@@ -1,9 +1,9 @@
 # Neon PostgreSQL Integration
 
 Status: Deployment Ready Locally / Neon Validation Pending
-Version: 0.2
+Version: 0.3
 Phase: 5 / P5-06A
-Last Updated: 2026-10-23
+Last Updated: 2026-11-19
 
 ## 1. Decision
 
@@ -27,7 +27,7 @@ Neon explicitly advises against `pg_dump` through a pooled connection. Schema op
 
 The current Free plan advertises $0 with no time limit or credit card requirement, 100 projects, 100 CU-hours per project/month, 1 GB database storage per project, up to 2 CU, 10 branches, one snapshot, an instant-restore window up to 6 hours or 1 GB of changes, 5 GB public network transfer per project, and one day of monitoring retention. Limits and enforcement can change and must be rechecked immediately before project creation.
 
-Neon does not list Seoul. The nearest AWS-hosted candidate for Lambda `ap-northeast-2` is `aws-ap-southeast-1` (Singapore). A project region is fixed after creation; moving region requires a new project and migration. Singapore is the default candidate, but real Seoul-to-Singapore cold/warm latency remains Pending.
+Neon does not list Seoul. Production Lambda and Neon use Singapore (`ap-southeast-1` / `aws-ap-southeast-1`). A Neon project region is fixed after creation; moving region requires a new project and migration. Real client-to-Singapore and cold/warm latency must remain part of production monitoring.
 
 Scale to zero occurs after five inactive minutes on Free. A first request resumes compute and may add several hundred milliseconds plus Lambda/NestJS cold-start time. Do not use keep-warm traffic to defeat the idle policy. Vercel's one bounded retry and recoverable user flow remain required.
 
@@ -98,15 +98,35 @@ Pending because no Neon project was created: pooled and direct endpoint authenti
 
 Use distinct credentials where Neon role management permits:
 
-- runtime role: connect and `SELECT` on approved application tables only for the current read-only recommendation flow;
+- runtime role: connect and use the `public` schema, `SELECT` approved cocktail data, and `SELECT`, `INSERT`, and `DELETE` on `shared_results`;
 - migration role: schema DDL and migration-table access, used only in an approved release job;
 - seed role: `INSERT` on catalog tables without general schema administration;
 - backup role: `CONNECT` and read access needed by `pg_dump`.
+
+`shared_results` is intentionally writable by the runtime role. `POST /shared-results` inserts an immutable result snapshot, `GET /shared-results/:id` reads it, and a later share creation opportunistically deletes expired rows. The runtime role does not need `UPDATE`, `TRUNCATE`, `REFERENCES`, or `TRIGGER` on this table.
+
+The currently deployed runtime role is named `cocktail_runtime_ro`. The `_ro` suffix is a legacy name from the earlier read-only recommendation flow and no longer describes its table-scoped permissions. Renaming or replacing the role requires coordinated credential and Lambda configuration rotation; until then, grants remain least-privilege by table and operation rather than by role name.
+
+After a migration creates a runtime-accessed table, verify and apply its grants before deploying code that uses it. For `shared_results`, the required grant shape is:
+
+```sql
+GRANT USAGE ON SCHEMA public TO cocktail_runtime_ro;
+GRANT SELECT, INSERT, DELETE ON TABLE public.shared_results TO cocktail_runtime_ro;
+```
+
+Verify the effective privileges rather than relying on the migration owner:
+
+```sql
+SELECT
+  has_table_privilege('cocktail_runtime_ro', 'public.shared_results', 'SELECT') AS can_select,
+  has_table_privilege('cocktail_runtime_ro', 'public.shared_results', 'INSERT') AS can_insert,
+  has_table_privilege('cocktail_runtime_ro', 'public.shared_results', 'DELETE') AS can_delete;
+```
 
 Do not place connection strings in browser variables, GitHub output, shell history, command arguments, or committed files.
 
 ## 8. Provisioning acceptance gate
 
-Before Lambda receives traffic, verify both endpoint hostnames and role grants against the actual project, run migration twice, run Seed twice, confirm the second Seed inserts zero rows, and restore one encrypted dump into a separate branch/database. A failed TLS, migration, Seed, backup, or restore check stops deployment. Production is never overwritten directly.
+Before Lambda receives traffic, verify both endpoint hostnames and table-level runtime grants against the actual project, run migration twice, run Seed twice, confirm the second Seed inserts zero rows, and restore one encrypted dump into a separate branch/database. A failed TLS, grant, migration, Seed, backup, or restore check stops deployment. Production is never overwritten directly.
 
 The Free plan remains the selected budget assumption at USD 0. Exceeding compute, storage, transfer, or project policy is not assumed to auto-upgrade safely; monitor Neon usage and treat exhaustion behavior as Pending until verified in the created account.

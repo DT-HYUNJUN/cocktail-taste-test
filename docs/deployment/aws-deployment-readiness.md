@@ -1,17 +1,17 @@
 # AWS and Neon Deployment Readiness
 
-Status: Ready for Approved Provisioning / External Validation Pending  
-Version: 0.1  
-Phase: 5 / P5-06A  
-Last Updated: 2026-10-23
+Status: Historical Provisioning Record / Production Follow-up
+Version: 0.2
+Phase: 5 / P5-06A
+Last Updated: 2026-11-19
 
 ## 1. Readiness decision
 
 The repository is locally ready to enter an explicitly approved P5-06B provisioning run. No AWS or Neon resource has been created or changed in P5-06A.
 
 ```text
-Browser -> Vercel Route Handler -> API Gateway HTTP API (Seoul)
-        -> Lambda Node.js 22 arm64 -> Neon PostgreSQL (Singapore candidate)
+Browser -> Amplify Route Handler -> API Gateway HTTP API (Singapore)
+        -> Lambda Node.js 22 arm64 -> Neon PostgreSQL (Singapore)
 ```
 
 The SAM draft provides HTTP API payload v2.0 routes, 512 MB/15-second Lambda limits, reserved concurrency 2, stage throttling at 5 requests/second with burst 10, 14-day API/Lambda log retention, and no VPC. The function has no application AWS API permissions; SAM supplies only its generated basic logging role. X-Ray active tracing was removed because it is not required for launch and adds permissions, telemetry, and potential cost.
@@ -31,7 +31,7 @@ The SAM draft provides HTTP API payload v2.0 routes, 512 MB/15-second Lambda lim
 
 ## 3. AWS preflight
 
-- Region must be explicitly `ap-northeast-2`; never rely on a CLI default.
+- Region must be explicitly `ap-southeast-1`; never rely on a CLI default.
 - Runtime/artifact must remain Node.js 22 and `arm64`; verify ZIP checksum before upload.
 - Use HTTP API, not REST API, Function URL, VPC, NAT Gateway, WAF, or provisioned concurrency for the initial budgeted release.
 - Review the SAM change set before execution. Scope its deployment role to this stack and artifact bucket and use GitHub OIDC for automation; do not create a long-lived AWS access key.
@@ -45,7 +45,7 @@ The SAM draft provides HTTP API payload v2.0 routes, 512 MB/15-second Lambda lim
 
 Neon Free currently advertises 100 projects, 100 CU-hours/project/month, 1 GB/project, up to 2 CU, 10 branches, a six-hour instant-restore window, and scale-to-zero after five idle minutes. Singapore (`aws-ap-southeast-1`) is the closest listed AWS region; Seoul is not listed. Limits were checked on 2026-10-23 and must be rechecked on creation day.
 
-- Lambda uses the `-pooler` hostname, runtime read-only role, and pool size 1.
+- Lambda uses the `-pooler` hostname, a table-scoped least-privilege runtime role, and pool size 1. The role reads cocktail data and has `SELECT`, `INSERT`, and `DELETE` only on `shared_results` for result sharing and expiry cleanup.
 - migration, seed, and `pg_dump` use the direct hostname and separate credentials.
 - `DATABASE_SSL_MODE=verify-full`; do not approve `require` for production.
 - migration and seed remain explicit and never run during Lambda initialization.
