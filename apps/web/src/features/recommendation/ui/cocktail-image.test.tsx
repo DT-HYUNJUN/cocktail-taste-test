@@ -13,7 +13,7 @@ describe("CocktailImage", () => {
 
     expect(image.getAttribute("src")).toContain("%2Fcocktails%2Fmojito.png");
     expect(image.className).toContain("object-contain");
-    expect(image.className).toContain("md:object-cover");
+    expect(image.className).not.toContain("object-cover");
   });
 
   it("shows a loading placeholder until the image is ready", async () => {

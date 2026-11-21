@@ -53,6 +53,7 @@ const renderAssessment = async () => {
 describe("Assessment", () => {
   it("moves from Q1 to Q2 only after medium is selected and next is clicked", async () => {
     await renderAssessment();
+    expect(screen.getByRole("link", { name: "칵테일 취향 테스트" })).toHaveAttribute("href", "/");
     const next = screen.getByRole("button", { name: "다음 질문" });
     expect(next).toBeDisabled();
     fireEvent.click(screen.getByRole("radio", { name: "적당히 달콤한 게 좋아요" }));
@@ -109,7 +110,7 @@ describe("Assessment", () => {
   it("keeps the Q8 answer after successful submission", async () => {
     await renderAssessment();
     completeAssessment();
-    fireEvent.click(screen.getByRole("checkbox", { name: "gin" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "진 (Gin)" }));
     fireEvent.click(screen.getByRole("button", { name: "결과 확인하기" }));
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/result"));
     expect(useAssessmentStore.getState().answers["preferred-base-spirits"]).toEqual(["gin"]);
@@ -143,6 +144,8 @@ describe("Assessment", () => {
 
     expect(loading).toBeVisible();
     expect(loading).toHaveAttribute("aria-busy", "true");
+    expect(screen.getByRole("heading", { name: "취향을 한 잔에 담는 중이에요" })).toBeVisible();
+    expect(screen.getByText(/딱 맞는 균형을 찾고 있어요/)).toBeVisible();
 
     // 질문 및 제출 버튼이 화면에서 제거된다.
     expect(
@@ -190,14 +193,14 @@ describe("Assessment", () => {
       .mockResolvedValueOnce(new Response(JSON.stringify({ profile: { dimensions: [], preferredFlavors: [], avoidedFlavors: [], preferredBaseSpirits: [] }, recommendations: [] }), { status: 200 }));
     await renderAssessment();
     completeAssessment();
-    fireEvent.click(screen.getByRole("checkbox", { name: "gin" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "진 (Gin)" }));
     fireEvent.click(screen.getByRole("button", { name: "결과 확인하기" }));
     expect(await screen.findByRole("button", { name: "다시 시도" })).toBeVisible();
     expect(screen.queryByRole("status", { name: "칵테일 취향 분석 중" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "결과 확인하기" })).toBeVisible();
-    expect(screen.getByRole("checkbox", { name: "gin" })).toBeChecked();
-    fireEvent.click(screen.getByRole("checkbox", { name: "gin" }));
-    fireEvent.click(screen.getByRole("checkbox", { name: "rum" }));
+    expect(screen.getByRole("checkbox", { name: "진 (Gin)" })).toBeChecked();
+    fireEvent.click(screen.getByRole("checkbox", { name: "진 (Gin)" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "럼 (Rum)" }));
     fireEvent.click(screen.getByRole("button", { name: "결과 확인하기" }));
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/result"));
     expect(fetch).toHaveBeenCalledTimes(2);

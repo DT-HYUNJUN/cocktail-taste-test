@@ -7,6 +7,8 @@ interface CocktailImageProps {
   cocktailId: string;
   imageUrl: string | null;
   name: string;
+  fit?: "contain" | "cover";
+  layout?: "portrait" | "responsive-hero" | "split-hero";
 }
 
 const LOCAL_COCKTAIL_IDS = new Set([
@@ -24,7 +26,7 @@ const LOCAL_COCKTAIL_IDS = new Set([
   "tom-collins",
 ]);
 
-export function CocktailImage({ cocktailId, imageUrl, name }: CocktailImageProps) {
+export function CocktailImage({ cocktailId, imageUrl, name, fit = "contain", layout = "portrait" }: CocktailImageProps) {
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const [loadedUrl, setLoadedUrl] = useState<string | null>(null);
   const hasLocalImage = LOCAL_COCKTAIL_IDS.has(cocktailId);
@@ -35,7 +37,7 @@ export function CocktailImage({ cocktailId, imageUrl, name }: CocktailImageProps
 
   return (
     <div className="h-full bg-[#FFF0E6]">
-      <div className="relative aspect-[4/5] overflow-hidden md:h-full md:aspect-auto">
+      <div className={`relative overflow-hidden ${layout === "responsive-hero" ? "aspect-[4/5] lg:aspect-[16/7]" : layout === "split-hero" ? "aspect-[4/5] lg:h-full lg:aspect-auto" : "aspect-[4/5]"}`}>
         {showFallback ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-4" role="img" aria-label={`${name} 이미지 준비 중`}>
             <span aria-hidden="true" className="text-7xl">
@@ -50,7 +52,7 @@ export function CocktailImage({ cocktailId, imageUrl, name }: CocktailImageProps
             fill
             priority
             sizes="(min-width: 768px) 45vw, 100vw"
-            className={`object-contain object-center transition-opacity duration-200 md:object-cover ${showLoading ? "opacity-0" : "opacity-100"}`}
+            className={`${fit === "cover" ? "object-cover" : "object-contain"} object-center transition-opacity duration-200 ${showLoading ? "opacity-0" : "opacity-100"}`}
             unoptimized={!hasLocalImage}
             onLoad={() => setLoadedUrl(resolvedImageUrl)}
             onError={() => setFailedUrl(resolvedImageUrl)}

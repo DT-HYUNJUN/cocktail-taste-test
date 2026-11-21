@@ -1,16 +1,15 @@
 "use client";
 
 import type { RecommendationResponse } from "@cocktail-taste-test/contracts";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { hydrateAssessmentStore, useAssessmentStore } from "../../assessment/model/assessment-store";
 import { serializeAssessmentAnswers } from "../../assessment/model/answers";
 import { clearRecommendationResult, loadRecommendationResult } from "../model/result-snapshot";
 import { RecommendationCard } from "./recommendation-card";
+import { ResultState } from "./result-state";
 import { ShareResult } from "./share-result";
 import { TasteProfile } from "./taste-profile";
-import { createMockRecommendationResponse } from "../model/mock-recommendation";
 
 export function RecommendationResult() {
   const router = useRouter();
@@ -23,32 +22,15 @@ export function RecommendationResult() {
     if (!assessmentHasHydrated) void hydrateAssessmentStore();
   }, [assessmentHasHydrated]);
 
-  // useEffect(() => {
-  //   let active = true;
-  //   const recovered = loadRecommendationResult();
-  //   queueMicrotask(() => {
-  //     if (!active) return;
-  //     setResult(recovered);
-  //     setHasRecovered(true);
-  //   });
-  //   return () => {
-  //     active = false;
-  //   };
-  // }, []);
-
   useEffect(() => {
     let active = true;
 
     const recovered = loadRecommendationResult();
 
-    const useMock = process.env.NODE_ENV === "development" && process.env.NEXT_PUBLIC_USE_MOCK_RECOMMENDATIONS === "true" && recovered !== null && recovered.recommendations.length === 0;
-
-    const displayResult = useMock ? createMockRecommendationResponse(recovered.profile) : recovered;
-
     queueMicrotask(() => {
       if (!active) return;
 
-      setResult(displayResult);
+      setResult(recovered);
       setHasRecovered(true);
     });
 
@@ -64,95 +46,73 @@ export function RecommendationResult() {
   };
 
   if (!hasRecovered) {
-    return (
-      <section className="mx-auto flex min-h-screen max-w-3xl items-center justify-center px-5" aria-busy="true" aria-live="polite">
-        추천 결과를 불러오는 중입니다.
-      </section>
-    );
+    return <ResultState eyebrow="POURING YOUR RESULT" title="결과를 잔에 담는 중이에요" description="당신의 취향과 추천 칵테일을 불러오고 있어요." icon="🍸" busy />;
   }
 
   if (result === null) {
-    return (
-      <section className="mx-auto flex min-h-screen max-w-2xl flex-col items-center justify-center px-5 text-center">
-        <h1 className="text-3xl font-semibold text-stone-950">저장된 추천 결과가 없어요</h1>
-        <p className="mt-4 leading-7 text-stone-600">취향 테스트를 완료하면 이곳에서 추천 결과를 확인할 수 있습니다.</p>
-        <Link href="/test" className="mt-8 rounded-lg bg-stone-950 px-5 py-3 font-medium text-white">
-          취향 테스트로 이동
-        </Link>
-      </section>
-    );
+    return <ResultState eyebrow="EMPTY GLASS" title="저장된 추천 결과가 없어요" description="취향 테스트를 완료하면 당신에게 꼭 맞는 한 잔을 이곳에서 확인할 수 있어요." icon="🥃" action={{ href: "/test", label: "취향 테스트로 이동" }} />;
   }
 
   const recommendation = result.recommendations[0];
 
-  const isMockResult = process.env.NODE_ENV === "development" && process.env.NEXT_PUBLIC_USE_MOCK_RECOMMENDATIONS === "true" && recommendation?.cocktail.id.startsWith("mock-") === true;
-
   return (
-    <div className="mx-auto w-full max-w-5xl px-5 py-10 sm:px-8 sm:py-14">
-      <header>
-        <p className="text-xs font-bold tracking-[0.16em] text-[#B74716]">{recommendation ? "YOUR PERFECT SIP" : "YOUR TASTE RESULT"}</p>
+    <div className="relative mx-auto w-full max-w-6xl overflow-hidden px-5 pb-8 pt-4 sm:px-8 sm:pb-12 sm:pt-6 lg:pb-12 lg:pt-6">
+      <div aria-hidden="true" className="absolute top-10 -left-20 size-40 rounded-full bg-lilac/35 blur-3xl" />
+      <div aria-hidden="true" className="absolute top-[34rem] -right-16 size-36 rounded-full bg-primary/20 blur-3xl" />
+      <div aria-hidden="true" className="absolute bottom-24 -left-20 size-44 rounded-full bg-lime/30 blur-3xl" />
 
-        <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">{recommendation ? "당신을 위한 한 잔을 찾았어요!" : "취향 분석을 완료했어요!"}</h1>
+      {!recommendation ? (
+        <header className="relative max-w-3xl">
+          <p className="text-xs font-bold tracking-[0.16em] text-[#B74716]">{recommendation ? "YOUR PERFECT SIP" : "YOUR TASTE RESULT"}</p>
 
-        <p className="mt-3 text-sm leading-7 text-muted-foreground sm:text-base">
-          {recommendation ? "당신의 취향을 담은 특별한 칵테일 한 잔을 소개할게요." : "8개의 질문으로 알아본 당신의 취향을 아래에서 확인해 보세요."}
-        </p>
-      </header>
+          <h1 className="mt-3 text-4xl font-extrabold tracking-[-0.04em] text-foreground sm:text-5xl lg:text-6xl">{recommendation ? "찾았다, 당신의 한 잔!" : "당신의 취향을 찾았어요!"}</h1>
 
-      {/* 추천 칵테일 */}
-      <section className="mt-10" aria-labelledby="recommendations-title">
-        {/* <h2 id="recommendations-title" className="text-2xl font-bold text-foreground">
-          {recommendation ? "당신의 칵테일" : "추천 결과"}
-        </h2> */}
-        {isMockResult && (
-          <p className="mt-3 rounded-xl border border-border bg-[#FFF0E6] px-4 py-3 text-sm text-[#A94417]">현재 표시된 칵테일은 UI 개발을 위한 샘플 데이터입니다. 실제 추천 결과가 아닙니다.</p>
-        )}
-        {/* {recommendation ? (
-          <div className="mt-5 rounded-2xl border border-stone-200 bg-white p-8 text-center shadow-sm">
-            <h3 className="text-xl font-semibold text-stone-950">현재 추천할 수 있는 칵테일이 없어요</h3>
-            <p className="mt-3 text-stone-600">취향 프로필은 정상적으로 생성되었습니다. 추천 가능한 칵테일이 준비되면 결과를 확인할 수 있어요.</p>
-          </div>
-        ) : (
-          <div className="mt-5 grid gap-6">
-            {recommendation.map((item) => (
-              <RecommendationCard key={item.cocktail.id} item={item} />
-            ))}
-          </div>
-        )} */}
+          <p className="mt-3 text-sm leading-7 text-muted-foreground sm:text-base">
+            {recommendation ? "여덟 번의 선택 끝에 도착한 한 잔이에요. 꽤 근사한 취향을 가지고 계시네요." : "8개의 질문으로 알아본 당신의 취향을 아래에서 확인해 보세요."}
+          </p>
+        </header>
+      ) : null}
+
+      <section className={`relative ${recommendation ? "mt-0" : "mt-10"}`} aria-labelledby="recommendations-title">
         {recommendation ? (
-          <RecommendationCard item={recommendation} />
+          <RecommendationCard
+            item={recommendation}
+            profile={result.profile}
+            actions={<ShareResult result={result} answers={serializeAssessmentAnswers(assessmentAnswers)} variant="hero" />}
+          />
         ) : (
-          <div className="rounded-card border border-border bg-surface p-8 text-center">
-            <h3 className="text-lg font-semibold text-foreground">아직 추천할 수 있는 칵테일이 없어요</h3>
-            <p className="mt-3 text-sm text-muted-foreground">취향 분석은 완료됐어요. 추천 칵테일이 준비되면 이곳에서 확인할 수 있어요.</p>
+          <div className="relative overflow-hidden rounded-card border border-primary/20 bg-primary/5 p-8 text-center shadow-[0_14px_40px_rgba(48,35,43,0.06)]">
+            <span aria-hidden="true" className="absolute -right-5 -top-7 text-8xl text-lime/55">✦</span>
+            <span aria-hidden="true" className="text-4xl">🍹</span>
+            <h3 className="mt-4 text-xl font-bold text-foreground">아직 추천할 수 있는 칵테일이 없어요</h3>
+            <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-muted-foreground">취향 분석은 잘 끝났어요. 아래에서 나의 취향 프로필을 먼저 확인해 보세요.</p>
           </div>
         )}
       </section>
 
-      {/* 취향표 */}
-      <section className="mt-12" aria-label="나의 취향 분석">
-        <TasteProfile profile={result.profile} />
-      </section>
+      {!recommendation ? (
+        <section className="relative mx-auto mt-10 max-w-4xl lg:max-w-6xl" aria-label="나의 취향 분석">
+          <TasteProfile profile={result.profile} />
+        </section>
+      ) : null}
 
-      <div className="mt-10 sm:mt-12">
-        <ShareResult result={result} answers={serializeAssessmentAnswers(assessmentAnswers)} />
-      </div>
-
-      <div className="mt-6 flex justify-center">
+      <div className="relative mx-auto mt-10 flex max-w-4xl justify-center lg:max-w-6xl">
         <button
           type="button"
           onClick={restart}
           className="
-            w-full rounded-full
-            border border-border bg-surface px-8 py-3.5
-            text-sm font-bold text-foreground
-            transition-all duration-200
-            hover:bg-background
-            active:scale-[0.98]
+            min-h-14 w-full rounded-button
+            border border-transparent bg-primary px-8 py-3.5
+            text-base font-bold text-primary-foreground
+            shadow-[0_8px_0_var(--primary-shadow)]
+            transition-transform duration-200
+            hover:-translate-y-0.5
+            active:translate-y-1 active:shadow-[0_4px_0_var(--primary-shadow)]
             focus-visible:outline-2
             focus-visible:outline-offset-4
-            focus-visible:outline-primary
+            focus-visible:outline-foreground
             sm:w-auto sm:min-w-56
+            motion-reduce:transition-none motion-reduce:hover:translate-y-0
           "
         >
           취향 테스트 다시 하기

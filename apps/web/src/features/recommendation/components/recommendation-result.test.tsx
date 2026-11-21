@@ -88,11 +88,7 @@ describe("RecommendationResult", () => {
     saveRecommendationResult(result);
     render(<RecommendationResult />);
 
-    expect(
-      await screen.findByRole("heading", {
-        name: "당신을 위한 한 잔을 찾았어요!",
-      }),
-    ).toBeVisible();
+    expect(await screen.findByText("당신과 가장 잘 어울리는 칵테일은")).toBeVisible();
 
     const cards = screen.getAllByRole("article");
 
@@ -138,7 +134,7 @@ describe("RecommendationResult", () => {
     ).toBeVisible();
 
     expect(within(card).getByText("선호하는 단맛·청량감과 잘 어울려요")).toBeVisible();
-    expect(within(card).getByRole("heading", { name: "이 칵테일의 맛" })).toBeVisible();
+    expect(within(card).getByRole("heading", { name: "이 한 잔의 맛" })).toBeVisible();
     expect(within(card).getByRole("meter", { name: "산미 4점" })).toHaveAttribute("aria-valuenow", "4");
     expect(within(card).getByText("매우 높음")).toBeVisible();
   });
@@ -155,7 +151,7 @@ describe("RecommendationResult", () => {
 
     expect(
       await screen.findByRole("heading", {
-        name: "취향 분석을 완료했어요!",
+        name: "당신의 취향을 찾았어요!",
       }),
     ).toBeVisible();
 

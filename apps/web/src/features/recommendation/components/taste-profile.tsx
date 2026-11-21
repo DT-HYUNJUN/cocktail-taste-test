@@ -49,16 +49,12 @@ export function TasteProfile({ profile, perspective = "owner" }: { profile: User
   return (
     <section
       aria-labelledby="taste-profile-title"
-      className="
-        rounded-card border border-border
-        bg-surface p-5
-        sm:p-7
-      "
+      className="rounded-image border border-border bg-surface p-5 shadow-[0_18px_55px_rgba(48,35,43,0.06)] sm:p-8"
     >
       <div>
         <p className="text-xs font-bold tracking-[0.12em] text-[#B74716]">{perspective === "shared" ? "SHARED TASTE PROFILE" : "MY TASTE PROFILE"}</p>
 
-        <h2 id="taste-profile-title" className="mt-2 text-2xl font-bold tracking-tight text-foreground">
+        <h2 id="taste-profile-title" className="mt-2 text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
           {perspective === "shared" ? "친구의 취향 프로필" : "나의 취향 프로필"}
         </h2>
 
@@ -71,9 +67,9 @@ export function TasteProfile({ profile, perspective = "owner" }: { profile: User
       </div>
 
       {/* 취향 점수 */}
-      <dl className="mt-7 grid gap-3 sm:grid-cols-2">
+      <dl className="mt-7 grid gap-x-8 gap-y-5 sm:grid-cols-2">
         {profile.dimensions.map(({ dimension, score }) => (
-          <div key={dimension} className="rounded-2xl bg-background p-4">
+          <div key={dimension}>
             <div className="flex items-center justify-between gap-3">
               <dt className="text-sm font-semibold text-foreground">{DIMENSION_LABELS[dimension]}</dt>
 
@@ -84,7 +80,7 @@ export function TasteProfile({ profile, perspective = "owner" }: { profile: User
               <div className="h-full rounded-full bg-primary" style={{ width: `${(score / 5) * 100}%` }} />
             </div>
 
-            <p className="mt-2 text-xs text-muted-foreground">{SCORE_LABELS[score]}</p>
+            <p className="mt-1.5 text-xs text-muted-foreground">{SCORE_LABELS[score]}</p>
           </div>
         ))}
       </dl>

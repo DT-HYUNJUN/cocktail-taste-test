@@ -68,7 +68,7 @@ describe("ShareResult", () => {
     Object.defineProperty(navigator, "share", { configurable: true, value: share });
 
     render(<ShareResult result={result} answers={[...answers]} />);
-    fireEvent.click(screen.getByRole("button", { name: "결과 친구에게 공유하기" }));
+    fireEvent.click(screen.getByRole("button", { name: "친구에게 공유" }));
 
     await waitFor(() => expect(share).toHaveBeenCalledTimes(1));
 
@@ -86,7 +86,7 @@ describe("ShareResult", () => {
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
 
     render(<ShareResult result={result} answers={[...answers]} />);
-    fireEvent.click(screen.getByRole("button", { name: "결과 친구에게 공유하기" }));
+    fireEvent.click(screen.getByRole("button", { name: "친구에게 공유" }));
 
     await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
 
@@ -105,7 +105,7 @@ describe("ShareResult", () => {
     Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: revokeObjectUrl });
 
     render(<ShareResult result={result} answers={[...answers]} />);
-    fireEvent.click(screen.getByRole("button", { name: "결과 이미지 저장하기" }));
+    fireEvent.click(screen.getByRole("button", { name: "이미지 저장" }));
 
     await waitFor(() => expect(click).toHaveBeenCalledTimes(1));
 

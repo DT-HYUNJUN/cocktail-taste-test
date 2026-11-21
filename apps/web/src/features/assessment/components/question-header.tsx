@@ -1,4 +1,6 @@
 import type { RefObject } from "react";
+import Image from "next/image";
+import Link from "next/link";
 
 type QuestionHeaderProps = {
   index: number;
@@ -12,30 +14,30 @@ export function QuestionHeader({ index, total, title, titleRef }: QuestionHeader
   const progress = total > 0 ? (current / total) * 100 : 0;
 
   return (
-    <header className="mb-8">
-      {/* 테스트명 및 현재 질문 */}
-      <div className="mb-4 flex items-center justify-between gap-4">
-        <span className="text-sm font-semibold text-foreground">칵테일 취향 테스트</span>
+    <header className="mb-8 sm:mb-10">
+      <div className="mb-5 flex items-center justify-between gap-4">
+        <Link href="/" className="flex items-center gap-2.5 text-sm font-bold text-foreground focus-visible:rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary">
+          <Image src="/icon.svg" alt="" width={32} height={32} aria-hidden="true" className="size-8 rounded-lg" />
+          <span>칵테일 취향 테스트</span>
+        </Link>
 
-        <span className="text-sm font-bold tabular-nums text-[#B74716]" aria-label={`질문 ${current} / ${total}`}>
+        <span className="font-mono text-sm font-bold tabular-nums text-accent-foreground" aria-label={`질문 ${current} / ${total}`}>
           {String(current).padStart(2, "0")} / {String(total).padStart(2, "0")}
         </span>
       </div>
 
-      {/* 진행률 */}
-      <div role="progressbar" aria-label="질문 진행률" aria-valuemin={0} aria-valuemax={total} aria-valuenow={current} className="h-2 w-full overflow-hidden rounded-full bg-border">
-        <div className="h-full rounded-full bg-primary transition-[width] duration-300 motion-reduce:transition-none" style={{ width: `${progress}%` }} />
+      <div role="progressbar" aria-label="질문 진행률" aria-valuemin={0} aria-valuemax={total} aria-valuenow={current} className="h-2.5 w-full overflow-hidden rounded-full bg-[#F0E3D9]">
+        <div className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out motion-reduce:transition-none" style={{ width: `${progress}%` }} />
       </div>
 
-      {/* 질문 제목 */}
-      <div className="mt-10">
-        <p className="mb-3 text-sm font-bold tracking-[0.12em] text-[#B74716]">QUESTION {String(current).padStart(2, "0")}</p>
+      <div className="mt-9 text-center sm:mt-11">
+        <p className="mb-3 font-mono text-xs font-bold tracking-[0.18em] text-accent-foreground">QUESTION {String(current).padStart(2, "0")}</p>
 
-        <h1 ref={titleRef} id="question-title" tabIndex={-1} className="text-2xl font-bold leading-snug tracking-tight text-foreground outline-none sm:text-3xl">
+        <h1 ref={titleRef} id="question-title" tabIndex={-1} className="text-2xl font-extrabold leading-snug tracking-[-0.025em] text-foreground outline-none sm:text-4xl">
           {title}
         </h1>
 
-        <p className="mt-3 text-sm text-muted-foreground">가장 가까운 취향을 선택해 주세요.</p>
+        <p className="mt-3 text-sm leading-6 text-muted-foreground">정답은 없어요. 지금 끌리는 쪽을 골라주세요.</p>
       </div>
     </header>
   );

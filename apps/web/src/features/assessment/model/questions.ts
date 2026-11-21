@@ -15,9 +15,9 @@ export const FLAVOR_OPTIONS = [
 export type FlavorAnswerId = (typeof FLAVOR_OPTIONS)[number]["id"];
 
 export const BASE_SPIRIT_OPTIONS = [
-  { id: "gin", label: "gin" }, { id: "vodka", label: "vodka" },
-  { id: "rum", label: "rum" }, { id: "tequila", label: "tequila" },
-  { id: "whiskey", label: "whiskey" }, { id: "mezcal", label: "mezcal" },
+  { id: "gin", label: "진 (Gin)" }, { id: "vodka", label: "보드카 (Vodka)" },
+  { id: "rum", label: "럼 (Rum)" }, { id: "tequila", label: "테킬라 (Tequila)" },
+  { id: "whiskey", label: "위스키 (Whiskey)" }, { id: "mezcal", label: "메즈칼 (Mezcal)" },
 ] as const;
 export type BaseSpiritAnswerId = (typeof BASE_SPIRIT_OPTIONS)[number]["id"];
 
