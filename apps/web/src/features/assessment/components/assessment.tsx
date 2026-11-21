@@ -41,7 +41,7 @@ export function Assessment() {
   if (!hasHydrated) {
     return (
       <section className="mx-auto flex min-h-screen w-full max-w-3xl items-center justify-center px-5" aria-busy="true" aria-live="polite">
-        진행 상태를 불러오는 중입니다.
+        <p className="rounded-full border border-border bg-surface px-5 py-3 text-sm font-semibold text-muted-foreground">지난 취향을 다시 꺼내는 중이에요...</p>
       </section>
     );
   }
@@ -91,65 +91,70 @@ export function Assessment() {
   const conflictingSelections = question.id === "preferred-flavors" ? answers["avoided-flavors"] : question.id === "avoided-flavors" ? answers["preferred-flavors"] : [];
 
   return (
-    <section className="mx-auto w-full max-w-3xl px-5 py-8 sm:px-8 sm:py-12" aria-labelledby="question-title">
-      <QuestionHeader index={currentIndex} total={ASSESSMENT_QUESTIONS.length} title={question.title} titleRef={titleRef} />
-      <div>
-        {question.kind === "single" ? (
-          <SingleChoiceQuestion
-            question={question}
-            answer={typeof answer === "string" ? answer : undefined}
-            onChange={(value) => {
-              setCompletionError(null);
-              recommendation.reset();
-              selectSingle(question.id, value);
-            }}
-          />
-        ) : (
-          <MultiChoiceQuestion
-            question={question}
-            selections={selections}
-            conflictingSelections={conflictingSelections ?? []}
-            onToggle={(value) => {
-              setCompletionError(null);
-              recommendation.reset();
-              toggleMulti(question.id, value);
-            }}
-          />
-        )}
-        {completionError && (
-          <p className="mt-4 text-sm font-medium text-red-700" role="alert">
-            {completionError}
-          </p>
-        )}
-        {recommendation.isError && (
-          <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4" role="alert">
-            <p className="text-sm font-medium text-red-800">{recommendation.error.message}</p>
-            <div className="mt-3 flex flex-wrap gap-3">
-              <button type="button" onClick={submitAssessment} className="rounded-lg bg-red-800 px-4 py-2 text-sm font-medium text-white">
-                다시 시도
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  recommendation.reset();
-                  returnToLastQuestion();
-                }}
-                className="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-900"
-              >
-                답변 수정하기
-              </button>
+    <section className="relative mx-auto w-full max-w-4xl px-4 py-6 sm:px-8 sm:py-10 lg:py-12" aria-labelledby="question-title">
+      <div aria-hidden="true" className="absolute top-24 -left-10 size-36 rounded-full bg-lilac/35 blur-3xl" />
+      <div aria-hidden="true" className="absolute right-0 bottom-20 size-40 rounded-full bg-lime/30 blur-3xl" />
+
+      <div key={question.id} className="question-transition relative rounded-image border border-border bg-surface p-5 shadow-[0_24px_70px_rgba(48,35,43,0.08)] sm:p-8 lg:p-10">
+        <QuestionHeader index={currentIndex} total={ASSESSMENT_QUESTIONS.length} title={question.title} titleRef={titleRef} />
+        <div>
+          {question.kind === "single" ? (
+            <SingleChoiceQuestion
+              question={question}
+              answer={typeof answer === "string" ? answer : undefined}
+              onChange={(value) => {
+                setCompletionError(null);
+                recommendation.reset();
+                selectSingle(question.id, value);
+              }}
+            />
+          ) : (
+            <MultiChoiceQuestion
+              question={question}
+              selections={selections}
+              conflictingSelections={conflictingSelections ?? []}
+              onToggle={(value) => {
+                setCompletionError(null);
+                recommendation.reset();
+                toggleMulti(question.id, value);
+              }}
+            />
+          )}
+          {completionError && (
+            <p className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800" role="alert">
+              {completionError}
+            </p>
+          )}
+          {recommendation.isError && (
+            <div className="mt-5 rounded-card border border-red-200 bg-red-50 p-5" role="alert">
+              <p className="text-sm font-semibold text-red-800">잠깐, 잔을 준비하다 문제가 생겼어요. {recommendation.error.message}</p>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <button type="button" onClick={submitAssessment} className="rounded-button bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground">
+                  다시 시도
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    recommendation.reset();
+                    returnToLastQuestion();
+                  }}
+                  className="rounded-button border-2 border-border bg-surface px-5 py-2.5 text-sm font-bold text-foreground"
+                >
+                  답변 수정하기
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
+        <QuestionNavigation
+          isFirst={currentIndex === 0}
+          isLast={currentIndex === ASSESSMENT_QUESTIONS.length - 1}
+          canContinue={canContinue}
+          isPending={recommendation.isPending}
+          onPrevious={movePrevious}
+          onContinue={continueAssessment}
+        />
       </div>
-      <QuestionNavigation
-        isFirst={currentIndex === 0}
-        isLast={currentIndex === ASSESSMENT_QUESTIONS.length - 1}
-        canContinue={canContinue}
-        isPending={recommendation.isPending}
-        onPrevious={movePrevious}
-        onContinue={continueAssessment}
-      />
     </section>
   );
 }

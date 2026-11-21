@@ -28,11 +28,11 @@ describe("RecommendationCard", () => {
 
     expect(within(card).getByRole("heading", { name: "마가리타" })).not.toBeNull();
     expect(within(card).getByRole("img", { name: "마가리타 칵테일" })).not.toBeNull();
-    expect(within(card).queryByText("Margarita")).toBeNull();
+    expect(within(card).getByText("Margarita")).not.toBeNull();
     expect(within(card).getByText(/테킬라에 라임의 산미와 은은한 단맛을 더한 칵테일이에요/)).not.toBeNull();
     expect(within(card).getByRole("heading", { name: "이 칵테일이 어울리는 이유" })).not.toBeNull();
     expect(within(card).getByText("선호하는 산미·청량감과 잘 어울려요")).not.toBeNull();
-    expect(within(card).getByRole("heading", { name: "이 칵테일의 맛" })).not.toBeNull();
+    expect(within(card).getByRole("heading", { name: "이 한 잔의 맛" })).not.toBeNull();
     expect(within(card).getAllByRole("meter")).toHaveLength(5);
     expect(within(card).getByRole("meter", { name: "산미 5점" }).getAttribute("aria-valuenow")).toBe("5");
   });

@@ -32,7 +32,7 @@ describe("SharedRecommendationResult", () => {
     loadSharedResultMock.mockResolvedValue(shared);
     render(<SharedRecommendationResult id="abcdefghijklmnopqrstuv" />);
 
-    expect(await screen.findByRole("heading", { name: "친구의 칵테일 취향 결과예요" })).not.toBeNull();
+    expect(await screen.findByRole("heading", { name: "친구의 한 잔, 슬쩍 구경할까요?" })).not.toBeNull();
     expect(screen.getByRole("region", { name: "친구의 취향 프로필" })).not.toBeNull();
     expect(screen.getByRole("link", { name: "나도 테스트하기" }).getAttribute("href")).toBe("/test");
   });
@@ -42,6 +42,15 @@ describe("SharedRecommendationResult", () => {
     render(<SharedRecommendationResult id="abcdefghijklmnopqrstuv" />);
 
     expect(await screen.findByRole("heading", { name: "공유 결과를 찾을 수 없어요" })).not.toBeNull();
+    expect(screen.getByRole("link", { name: "나도 테스트하기" }).getAttribute("href")).toBe("/test");
+  });
+
+  it("shows a recoverable message when the shared result request fails", async () => {
+    loadSharedResultMock.mockRejectedValue(new Error("network-error"));
+    render(<SharedRecommendationResult id="abcdefghijklmnopqrstuv" />);
+
+    expect(await screen.findByRole("heading", { name: "공유 결과를 불러오지 못했어요" })).not.toBeNull();
+    expect(screen.getByText(/잠시 후 다시 시도하거나/)).not.toBeNull();
     expect(screen.getByRole("link", { name: "나도 테스트하기" }).getAttribute("href")).toBe("/test");
   });
 });

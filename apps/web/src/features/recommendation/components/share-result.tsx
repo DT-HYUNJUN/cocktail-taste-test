@@ -10,16 +10,37 @@ import { DIMENSION_LABELS, getCocktailDisplayName, SCORE_LABELS } from "./result
 type ShareResultProps = {
   result: RecommendationResponse;
   answers: CreateRecommendationRequest["answers"] | null;
+  variant?: "default" | "hero";
 };
 
 type ShareStatus = "idle" | "shared" | "copied" | "failed";
 type SaveStatus = "idle" | "saved" | "failed";
 
+function Share2Icon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="18" cy="5" r="3" />
+      <circle cx="6" cy="12" r="3" />
+      <circle cx="18" cy="19" r="3" />
+      <path d="m8.59 13.51 6.83 3.98" />
+      <path d="m15.41 6.51-6.82 3.98" />
+    </svg>
+  );
+}
+
+function DownloadIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <path d="m7 10 5 5 5-5" />
+      <path d="M12 15V3" />
+    </svg>
+  );
+}
+
 function createShareText(result: RecommendationResponse) {
   const recommendation = result.recommendations[0];
-  const cocktailLine = recommendation
-    ? `추천 칵테일: ${getCocktailDisplayName(recommendation.cocktail.id, recommendation.cocktail.name)}`
-    : "나만의 칵테일 취향 프로필을 완성했어요.";
+  const cocktailLine = recommendation ? `추천 칵테일: ${getCocktailDisplayName(recommendation.cocktail.id, recommendation.cocktail.name)}` : "나만의 칵테일 취향 프로필을 완성했어요.";
   const topDimensions = [...result.profile.dimensions]
     .sort((left, right) => right.score - left.score)
     .slice(0, 3)
@@ -49,7 +70,7 @@ async function copyText(text: string) {
   if (!copied) throw new Error("Copy failed");
 }
 
-export function ShareResult({ result, answers }: ShareResultProps) {
+export function ShareResult({ result, answers, variant = "default" }: ShareResultProps) {
   const [status, setStatus] = useState<ShareStatus>("idle");
   const [isSharing, setIsSharing] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
@@ -115,30 +136,40 @@ export function ShareResult({ result, answers }: ShareResultProps) {
   }[status];
 
   return (
-    <section className="rounded-card border border-[#F1D8C8] bg-[#FFF7F1] p-6 text-center sm:p-8" aria-labelledby="share-result-title">
-      <p className="text-xs font-bold tracking-[0.14em] text-[#B74716]">SHARE YOUR RESULT</p>
-      <h2 id="share-result-title" className="mt-2 text-xl font-bold text-foreground sm:text-2xl">
-        이 결과를 친구에게 공유해 보세요
+    <section className="flex flex-col items-end" aria-labelledby="share-result-title">
+      <h2 id="share-result-title" className="sr-only">
+        결과 공유 및 저장
       </h2>
-      <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-muted-foreground">친구가 내 추천 칵테일과 취향 결과를 확인하고, 자신의 테스트도 시작할 수 있어요.</p>
 
-      <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+      <div className={variant === "hero" ? "flex flex-row gap-3" : "flex flex-col gap-3 sm:flex-row"}>
         <button
           type="button"
           onClick={share}
           disabled={isSharing || isSaving}
-          className="w-full rounded-full bg-primary px-8 py-4 text-base font-bold text-primary-foreground transition-all duration-200 hover:brightness-95 active:scale-[0.98] disabled:cursor-wait disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary sm:w-auto sm:min-w-64"
+          className={
+            variant === "hero"
+              ? "flex size-10 items-center justify-center rounded-full border border-plum/20 bg-surface/80 text-plum transition hover:border-primary/45 hover:bg-surface disabled:opacity-60"
+              : "flex w-full items-center justify-center gap-2 rounded-button bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-[0_5px_0_var(--primary-shadow)] transition-all duration-150 hover:-translate-y-0.5 active:translate-y-1 active:shadow-none disabled:cursor-wait disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary sm:w-auto"
+          }
+          aria-label="친구에게 공유"
         >
-          {isSharing ? "공유 준비 중…" : "결과 친구에게 공유하기"}
+          <Share2Icon />
+          {variant === "hero" ? null : isSharing ? "공유 준비 중…" : "친구에게 공유"}
         </button>
 
         <button
           type="button"
           onClick={saveImage}
           disabled={isSharing || isSaving}
-          className="w-full rounded-full border border-[#E0BCA5] bg-white px-8 py-4 text-base font-bold text-[#A94417] transition-all duration-200 hover:bg-[#FFF0E6] active:scale-[0.98] disabled:cursor-wait disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#B74716] sm:w-auto sm:min-w-64"
+          className={
+            variant === "hero"
+              ? "flex size-10 items-center justify-center rounded-full border border-plum/20 bg-surface/80 text-plum transition hover:border-primary/45 hover:bg-surface disabled:opacity-60"
+              : "flex w-full items-center justify-center gap-2 rounded-button border border-border bg-surface px-5 py-2.5 text-sm font-bold text-foreground transition-all duration-150 hover:-translate-y-0.5 hover:border-primary/45 active:translate-y-0 disabled:cursor-wait disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary sm:w-auto"
+          }
+          aria-label="이미지 저장"
         >
-          {isSaving ? "이미지 만드는 중…" : "결과 이미지 저장하기"}
+          <DownloadIcon />
+          {variant === "hero" ? null : isSaving ? "이미지 만드는 중…" : "이미지 저장"}
         </button>
       </div>
 

@@ -1,20 +1,28 @@
 @import "tailwindcss";
 
 :root {
-  /* Brand */
-  --primary: #ff6f2c;
-  --primary-foreground: #24211f;
-  --coral: #ff8a80;
-  --lemon: #ffd166;
+  /* Playful Editorial brand */
+  --vanilla: #fff9f1;
+  --coral: #ff745e;
+  --coral-deep: #b43c2f;
+  --coral-shadow: #c94d3d;
+  --lime: #d8f36a;
+  --lilac: #c8b6ff;
+  --plum: #30232b;
+
+  --primary: var(--coral);
+  --primary-foreground: var(--plum);
+  --primary-shadow: var(--coral-shadow);
+  --accent-foreground: var(--coral-deep);
 
   /* Background & Surface */
-  --background: #fff9f3;
-  --foreground: #24211f;
-  --surface: #ffffff;
-  --border: #f0e4d9;
+  --background: var(--vanilla);
+  --foreground: var(--plum);
+  --surface: #fffdf9;
+  --border: #e8dbd2;
 
   /* Text */
-  --muted-foreground: #6e625c;
+  --muted-foreground: #706168;
 
   /* Radius */
   --radius: 14px;
@@ -27,8 +35,12 @@
   --color-foreground: var(--foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-vanilla: var(--vanilla);
   --color-coral: var(--coral);
-  --color-lemon: var(--lemon);
+  --color-lime: var(--lime);
+  --color-lilac: var(--lilac);
+  --color-plum: var(--plum);
+  --color-accent-foreground: var(--accent-foreground);
   --color-surface: var(--surface);
   --color-border: var(--border);
   --color-muted-foreground: var(--muted-foreground);
@@ -45,6 +57,27 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), Arial, sans-serif;
+}
+
+@keyframes question-enter {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.question-transition {
+  animation: question-enter 180ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .question-transition {
+    animation: none;
+  }
 }
 
 @media (hover: hover) and (pointer: fine) {
