@@ -30,22 +30,28 @@ async function mockRecommendation(page: Page, handler: (route: Route) => Promise
 
 async function startAssessment(page: Page) {
   await page.goto("/");
-  await page.locator('a[href="/test"]').click();
-  await expect(page).toHaveURL(/\/test$/);
+  await Promise.all([
+    page.waitForURL(/\/test$/),
+    page.getByRole("link", { name: "내 칵테일 찾기" }).click(),
+  ]);
 }
 
 async function answerSingle(page: Page, value = "medium") {
-  await page.locator(`input[type="radio"][value="${value}"]`).check();
+  await page.locator(`label:has(input[type="radio"][value="${value}"])`).click();
   await page.getByRole("button", { name: "다음 질문" }).click();
+}
+
+async function selectMultipleChoice(page: Page, value: string) {
+  await page.locator(`label:has(input[type="checkbox"][value="${value}"])`).click();
 }
 
 async function completeAssessment(page: Page) {
   for (let index = 0; index < 5; index += 1) await answerSingle(page);
-  await page.locator('input[type="checkbox"][value="citrus"]').check();
+  await selectMultipleChoice(page, "citrus");
   await page.getByRole("button", { name: "다음 질문" }).click();
-  await page.locator('input[type="checkbox"][value="smoky"]').check();
+  await selectMultipleChoice(page, "smoky");
   await page.getByRole("button", { name: "다음 질문" }).click();
-  await page.locator('input[type="checkbox"][value="gin"]').check();
+  await selectMultipleChoice(page, "gin");
   await page.getByRole("button", { name: "결과 확인하기" }).click();
 }
 
@@ -54,7 +60,7 @@ test("E2E-01 completes the full assessment and renders a recommendation", async 
   await startAssessment(page);
   await completeAssessment(page);
   await expect(page).toHaveURL(/\/result$/);
-  await expect(page.getByRole("heading", { name: "당신을 위한 한 잔을 찾았어요!" })).toBeVisible();
+  await expect(page.getByText("당신과 가장 잘 어울리는 칵테일은", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "톰 콜린스" })).toBeVisible();
   await expect(page.getByText("선호하는 진 베이스 칵테일이에요")).toBeVisible();
 });
@@ -66,11 +72,11 @@ test("E2E-02 preserves and revises a previous answer before submission", async (
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(successResponse) });
   });
   await startAssessment(page);
-  await page.locator('input[type="radio"][value="low"]').check();
+  await page.locator('label:has(input[type="radio"][value="low"])').click();
   await page.getByRole("button", { name: "다음 질문" }).click();
   await page.getByRole("button", { name: "이전 질문" }).click();
   await expect(page.locator('input[type="radio"][value="low"]')).toBeChecked();
-  await page.locator('input[type="radio"][value="high"]').check();
+  await page.locator('label:has(input[type="radio"][value="high"])').click();
   await page.getByRole("button", { name: "다음 질문" }).click();
   for (let index = 1; index < 5; index += 1) await answerSingle(page);
   await page.getByRole("button", { name: "다음 질문" }).click();
@@ -83,7 +89,7 @@ test("E2E-02 preserves and revises a previous answer before submission", async (
 test("E2E-03 restores partial assessment progress after reload", async ({ page }) => {
   await startAssessment(page);
   await answerSingle(page, "high");
-  await page.locator('input[type="radio"][value="low"]').check();
+  await page.locator('label:has(input[type="radio"][value="low"])').click();
   await page.reload();
   await expect(page.getByLabel("질문 2 / 8")).toBeVisible();
   await expect(page.locator('input[type="radio"][value="low"]')).toBeChecked();
@@ -104,7 +110,7 @@ test("E2E-05 treats an empty recommendation response as a normal result", async 
   await mockRecommendation(page, (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ...successResponse, recommendations: [] }) }));
   await startAssessment(page);
   await completeAssessment(page);
-  await expect(page.getByRole("heading", { name: "취향 분석을 완료했어요!" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "당신의 취향을 찾았어요!" })).toBeVisible();
   await expect(page.getByText("아직 추천할 수 있는 칵테일이 없어요")).toBeVisible();
 });
 
